@@ -1,7 +1,7 @@
 #region Copyright
 // 
-// DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// DotNetNukeÂ® - http://www.dotnetnuke.com
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -29,12 +29,15 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using System.Web.Caching;
 using System.Web.Security;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using DotNetNuke.Common.Utilities;
+using DotNetNuke.Entities.Controllers;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Instrumentation;
+using DotNetNuke.Services.Cache;
 using DotNetNuke.Services.Exceptions;
 using DotNetNuke.Services.Localization;
 
@@ -85,7 +88,7 @@ namespace DotNetNuke.UI.WebControls
 		private int _CaptchaLength = LENGTH_DEFAULT;
 		private string _CaptchaText;
 		private Unit _CaptchaWidth = Unit.Pixel(300);
-		private int _Expiration = EXPIRATION_DEFAULT;
+		private int _Expiration;
 		private bool _IsValid;
 		private string _RenderUrl = RENDERURL_DEFAULT;
 		private string _UserText = "";
@@ -99,6 +102,7 @@ namespace DotNetNuke.UI.WebControls
 		{
 			ErrorMessage = Localization.GetString("InvalidCaptcha", Localization.SharedResourceFile);
 			Text = Localization.GetString("CaptchaText.Text", Localization.SharedResourceFile);
+		    _Expiration = HostController.Instance.GetInteger("EXPIRATION_DEFAULT", EXPIRATION_DEFAULT);
 		}
 		
 		#endregion
@@ -551,34 +555,37 @@ namespace DotNetNuke.UI.WebControls
 			string[] Settings = Regex.Split(encodedText, _Separator);
 			try
 			{
-				int width = int.Parse(Settings[0]);
-				int height = int.Parse(Settings[1]);
-				string text = Settings[2];
-				string backgroundImage = Settings[3];
+                int width;
+                int height;
+                if (int.TryParse(Settings[0], out width) && int.TryParse(Settings[1], out height))
+                {
+                    string text = Settings[2];
+                    string backgroundImage = Settings[3];
 
-				Graphics g;
-				Brush b = new SolidBrush(Color.LightGray);
-				Brush b1 = new SolidBrush(Color.Black);
-				if (String.IsNullOrEmpty(backgroundImage))
-				{
-					bmp = CreateImage(width, height);
-				}
-				else
-				{
-					bmp = (Bitmap) System.Drawing.Image.FromFile(HttpContext.Current.Request.MapPath(backgroundImage));
-				}
-				g = Graphics.FromImage(bmp);
+                    Graphics g;
+                    Brush b = new SolidBrush(Color.LightGray);
+                    Brush b1 = new SolidBrush(Color.Black);
+                    if (String.IsNullOrEmpty(backgroundImage))
+                    {
+                        bmp = CreateImage(width, height);
+                    }
+                    else
+                    {
+                        bmp = (Bitmap)System.Drawing.Image.FromFile(HttpContext.Current.Request.MapPath(backgroundImage));
+                    }
+                    g = Graphics.FromImage(bmp);
 
-				//Create Text
-				GraphicsPath textPath = CreateText(text, width, height, g);
-				if (String.IsNullOrEmpty(backgroundImage))
-				{
-					g.FillPath(b, textPath);
-				}
-				else
-				{
-					g.FillPath(b1, textPath);
-				}
+                    //Create Text
+                    GraphicsPath textPath = CreateText(text, width, height, g);
+                    if (String.IsNullOrEmpty(backgroundImage))
+                    {
+                        g.FillPath(b, textPath);
+                    }
+                    else
+                    {
+                        g.FillPath(b1, textPath);
+                    }
+                }				
 			}
 			catch (Exception exc)
 			{
@@ -688,9 +695,14 @@ namespace DotNetNuke.UI.WebControls
 				sb.Append(CaptchaChars.Substring(rand.Next(intMaxLength), 1));
 			}
 		    var challenge = sb.ToString();
-            
+
+            //NOTE: this could be a problem in a web farm using in-memory caching where
+            // the request might go to another server in the farm. Also, in a system
+            // with a single server or web-farm, the cache might be cleared
+            // which will cause a problem in such case unless sticky sessions are used.
             var cacheKey = string.Format(DataCache.CaptchaCacheKey, challenge);
-            DataCache.SetCache(cacheKey, challenge, TimeSpan.FromMinutes(2));
+            DataCache.SetCache(cacheKey, challenge, (DNNCacheDependency)null, DateTime.Now.AddSeconds(_Expiration + 1),
+                Cache.NoSlidingExpiration, CacheItemPriority.AboveNormal, null);
 			return challenge;
 		}
 

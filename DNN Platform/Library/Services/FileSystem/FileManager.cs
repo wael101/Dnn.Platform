@@ -1,7 +1,7 @@
 #region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -51,6 +51,7 @@ using DotNetNuke.Services.FileSystem.Internal;
 using DotNetNuke.Services.Log.EventLog;
 using ICSharpCode.SharpZipLib.Zip;
 using System.Drawing.Imaging;
+using System.Text;
 
 namespace DotNetNuke.Services.FileSystem
 {
@@ -414,7 +415,7 @@ public virtual IFileInfo AddFile(IFolderInfo folder, string fileName, Stream fil
                         usingSeekableStream = true;
                     }
 
-                    CheckFileWritingRestrictions(folder, fileContent.Length, oldFile, createdByUserID);
+                    CheckFileWritingRestrictions(folder, fileName, fileContent, oldFile, createdByUserID);
 
                     // Retrieve Metadata
                     SetInitialFileMetadata(ref fileContent, file, folderProvider);
@@ -619,9 +620,9 @@ public virtual IFileInfo AddFile(IFolderInfo folder, string fileName, Stream fil
             }
         }
 
-        private void CheckFileWritingRestrictions(IFolderInfo folder, long fileSize, IFileInfo oldFile, int createdByUserId)
+        private void CheckFileWritingRestrictions(IFolderInfo folder, string fileName, Stream fileContent, IFileInfo oldFile, int createdByUserId)
         {
-            if (!PortalController.Instance.HasSpaceAvailable(folder.PortalID, fileSize))
+            if (!PortalController.Instance.HasSpaceAvailable(folder.PortalID, fileContent.Length))
             {
                 throw new NoSpaceAvailableException(
                     Localization.Localization.GetExceptionMessage("AddFileNoSpaceAvailable",
@@ -634,6 +635,13 @@ public virtual IFileInfo AddFile(IFolderInfo folder, string fileName, Stream fil
                 throw new FileLockedException(
                                 Localization.Localization.GetExceptionMessage("FileLockedOutOfPublishPeriodError",
                                                                                 "File locked. The file cannot be updated because it is out of Publish Period"));
+            }
+
+            if (!FileSecurityController.Instance.Validate(fileName, fileContent))
+            {
+                var defaultMessage = "The content of '{0}' is not valid. The file has not been added.";
+                var errorMessage = Localization.Localization.GetExceptionMessage("AddFileInvalidContent", defaultMessage);
+                throw new InvalidFileContentException(string.Format(errorMessage, fileName));
             }
         }
 
@@ -1730,20 +1738,17 @@ public virtual IFileInfo AddFile(IFolderInfo folder, string fileName, Stream fil
         internal virtual string GetHash(Stream stream)
         {
             Requires.NotNull("stream", stream);
-
-            var hashText = "";
-            string hexValue;
-
-            var hashData = SHA1.Create().ComputeHash(stream);
-
-            foreach (var b in hashData)
+            var hashText = new StringBuilder();
+            using (var hasher= SHA1.Create())
             {
-                hexValue = b.ToString("X").ToLower();
-                //Lowercase for compatibility on case-sensitive systems
-                hashText += (hexValue.Length == 1 ? "0" : "") + hexValue;
+                var hashData = hasher.ComputeHash(stream);
+                foreach (var b in hashData)
+                {
+                    hashText.Append(b.ToString("x2"));
+                }
             }
 
-            return hashText;
+            return hashText.ToString();
         }
 
         /// <summary>

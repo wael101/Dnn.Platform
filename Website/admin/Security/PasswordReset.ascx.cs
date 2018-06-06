@@ -1,7 +1,7 @@
 #region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -39,6 +39,7 @@ using DotNetNuke.UI.Skins.Controls;
 using DotNetNuke.Web.Client;
 using DotNetNuke.Web.Client.ClientResourceManagement;
 using DotNetNuke.Web.UI.WebControls;
+using DotNetNuke.Services.UserRequest;
 
 #endregion
 
@@ -72,9 +73,9 @@ namespace DotNetNuke.Modules.Admin.Security
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            _ipAddress = Request.UserHostAddress;
+            _ipAddress = UserRequestIPAddressController.Instance.GetUserRequestIPAddress(new HttpRequestWrapper(Request));
 
-			JavaScript.RequestRegistration(CommonJs.DnnPlugins);
+            JavaScript.RequestRegistration(CommonJs.DnnPlugins);
 			ClientResourceManager.RegisterScript(Page, "~/Resources/Shared/scripts/dnn.jquery.extensions.js");
 			ClientResourceManager.RegisterScript(Page, "~/Resources/Shared/scripts/dnn.jquery.tooltip.js");
 			ClientResourceManager.RegisterScript(Page, "~/Resources/Shared/scripts/dnn.PasswordStrength.js");
@@ -93,6 +94,7 @@ namespace DotNetNuke.Modules.Admin.Security
             if (Request.QueryString["resetToken"] != null)
             {
                 ResetToken = Request.QueryString["resetToken"];
+                txtUsername.Enabled = false;
                 
             }
 
@@ -126,7 +128,7 @@ namespace DotNetNuke.Modules.Admin.Security
         {
             var user = UserController.GetUserByPasswordResetToken(PortalId, ResetToken);
 
-            if (user == null)
+            if (user == null || user.PasswordResetExpiration < DateTime.Now)
             {
                 divPassword.Visible = false;
                 resetMessages.Visible = true;
@@ -205,7 +207,8 @@ namespace DotNetNuke.Modules.Admin.Security
                 return;
             }
 
-            if (UserController.ValidatePassword(txtPassword.Text)==false)
+            var newPassword = txtPassword.Text.Trim();
+            if (UserController.ValidatePassword(newPassword) ==false)
             {
                 resetMessages.Visible = true;
                 var failed = Localization.GetString("PasswordResetFailed");
@@ -220,7 +223,7 @@ namespace DotNetNuke.Modules.Admin.Security
             if (settings.EnableBannedList)
             {
                 var m = new MembershipPasswordController();
-                if (m.FoundBannedPassword(txtPassword.Text) || txtUsername.Text == txtPassword.Text)
+                if (m.FoundBannedPassword(newPassword) || txtUsername.Text == newPassword)
                 {
                     resetMessages.Visible = true;
                     var failed = Localization.GetString("PasswordResetFailed");
@@ -245,7 +248,7 @@ namespace DotNetNuke.Modules.Admin.Security
                 answer = txtAnswer.Text;
             }
 
-            if (UserController.ChangePasswordByToken(PortalSettings.PortalId, username, txtPassword.Text, answer, ResetToken, out errorMessage) == false)
+            if (UserController.ChangePasswordByToken(PortalSettings.PortalId, username, newPassword, answer, ResetToken, out errorMessage) == false)
             {
                 resetMessages.Visible = true;
                 var failed = errorMessage;
@@ -301,7 +304,7 @@ namespace DotNetNuke.Modules.Admin.Security
                 }
                 if (String.IsNullOrEmpty(redirectURL))
                 {
-                    if (PortalSettings.LoginTabId != -1 && PortalSettings.HomeTabId != -1)
+                    if (PortalSettings.RegisterTabId != -1 && PortalSettings.HomeTabId != -1)
                     {
                         //redirect to portal home page specified
                         redirectURL = Globals.NavigateURL(PortalSettings.HomeTabId);

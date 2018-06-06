@@ -2,7 +2,7 @@
 
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -262,7 +262,7 @@ namespace DotNetNuke.Entities.Urls
                                 {
                                     tabId = portal.HomeTabId;
                                 }
-                                if (string.IsNullOrEmpty(culture))
+                                if (culture == null)
                                 {
                                     culture = portal.DefaultLanguage; //set culture to default if not found specifically
                                 }
@@ -376,7 +376,7 @@ namespace DotNetNuke.Entities.Urls
 
             //Check for VanityUrl
             var doNotRedirectRegex = RegexUtils.GetCachedRegex(settings.DoNotRedirectRegex);
-            if (!found && !RewriterUtils.ServicesFrameworkRegex.IsMatch(result.RawUrl) && !doNotRedirectRegex.IsMatch(result.RawUrl))
+            if (!found && !Globals.ServicesFrameworkRegex.IsMatch(result.RawUrl) && !doNotRedirectRegex.IsMatch(result.RawUrl))
             {
                 string[] urlParams = tabLookUpKey.Split(new[] { "::" }, StringSplitOptions.None);
                 if (urlParams.Length > 1)
@@ -786,7 +786,6 @@ namespace DotNetNuke.Entities.Urls
             int maxTabPathDepth;
             int minAliasPathDepth;
             int minTabPathDepth;
-            bool triedFixingSubdomain = false;
             int curAliasPathDepth = 0;
 
             var tabDict = TabIndexController.FetchTabDictionary(result.PortalId,
@@ -1139,39 +1138,25 @@ namespace DotNetNuke.Entities.Urls
                 {
                     curAliasPathDepth += 1;
                     //gone too deep 
-                    if ((curAliasPathDepth > maxAliasPathDepth) & (reWritten == false))
+                    if ((curAliasPathDepth > maxAliasPathDepth) && !reWritten)
                     {
                         // no hope of finding it then 
-                        if (triedFixingSubdomain == false && false)
+                        if (!Globals.ServicesFrameworkRegex.IsMatch(url) && result.RedirectAllowed)
                         {
-                            //resplit the new url 
-                            splitUrl = newUrl.Split(Convert.ToChar("/"));
-                            curAliasPathDepth = minAliasPathDepth;
-                            if (result.RedirectAllowed)
+                            //nothing left to try 
+                            result.Action = (settings.DeletedTabHandlingType == DeletedTabHandlingType.Do404Error)
+                                    ? ActionType.Output404
+                                    : ActionType.Redirect301;
+                            if (result.Action == ActionType.Redirect301)
                             {
-                                result.Action = ActionType.Redirect301;
-                            }
-                            //this should be redirected 
-                            triedFixingSubdomain = true;
-                        }
-                        else
-                        {
-                            if (!RewriterUtils.ServicesFrameworkRegex.IsMatch(url) && result.RedirectAllowed)
-                            {
-                                //nothing left to try 
-                                result.Action = (settings.DeletedTabHandlingType == DeletedTabHandlingType.Do404Error)
-                                        ? ActionType.Output404
-                                        : ActionType.Redirect301;
-                                if (result.Action == ActionType.Redirect301)
-                                {
-                                    result.Reason = RedirectReason.Deleted_Page;
-                                    result.DoRewrite = true;
-                                    result.FinalUrl = Globals.AddHTTP(result.PortalAlias.HTTPAlias + "/");
-                                    reWritten = true;
-                                }
-                                break;
+                                result.Reason = RedirectReason.Deleted_Page;
+                                result.DoRewrite = true;
+                                result.FinalUrl = Globals.AddHTTP(result.PortalAlias.HTTPAlias + "/");
+                                reWritten = true;
                             }
                         }
+
+                        break;
                     }
                 }
             }

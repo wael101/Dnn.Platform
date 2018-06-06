@@ -1,7 +1,7 @@
 #region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -36,6 +36,7 @@ using System.Web.UI.WebControls;
 using DotNetNuke.Application;
 using DotNetNuke.Collections.Internal;
 using DotNetNuke.Common.Utilities;
+using DotNetNuke.Entities.Controllers;
 using DotNetNuke.Entities.Host;
 using DotNetNuke.Entities.Modules;
 using DotNetNuke.Entities.Modules.Actions;
@@ -279,7 +280,7 @@ namespace DotNetNuke.UI.Skins
                     if (controlPanel.IncludeInControlHierarchy)
                     {
                         //inject ControlPanel control into skin
-                        if (ControlPanel == null)
+                        if (ControlPanel == null || HostController.Instance.GetBoolean("IgnoreControlPanelWrapper", false))
                         {
                             if (form != null)
                             {
@@ -292,28 +293,7 @@ namespace DotNetNuke.UI.Skins
                         }
                         else
                         {
-                            if (form != null)
-                            {
-                                if (Host.ControlPanel.ToLowerInvariant().EndsWith("controlbar.ascx"))
-                                {
-                                    form.Controls.AddAt(0, controlPanel);
-                                }
-                                else
-                                {
-                                    ControlPanel.Controls.Add(controlPanel);
-                                }
-                            }
-                            else
-                            {
-                                if (Host.ControlPanel.ToLowerInvariant().EndsWith("controlbar.ascx"))
-                                {
-                                    Page.Controls.AddAt(0, controlPanel);
-                                }
-                                else
-                                {
-                                    ControlPanel.Controls.Add(controlPanel);
-                                }
-                            }
+                            ControlPanel.Controls.Add(controlPanel);
                         }
 
                         //register admin.css
@@ -434,6 +414,25 @@ namespace DotNetNuke.UI.Skins
             return success;
         }
 
+        /// <summary>
+        /// Handle access denied errors by displaying an error message 
+        /// or by performing a redirect to a predefined "access denied URL"
+        /// </summary>
+        /// <param name="redirect"></param>
+        private void HandleAccesDenied(bool redirect = false)
+        {
+            var message = Localization.GetString("TabAccess.Error");
+            if (redirect)
+            {
+                var redirectUrl = Globals.AccessDeniedURL(message);
+                Response.Redirect(redirectUrl, true);
+            }
+            else
+            {
+                AddPageMessage(this, "", message, ModuleMessage.ModuleMessageType.YellowWarning);
+            }
+        }
+
         private bool ProcessMasterModules()
         {
             bool success = true;
@@ -445,7 +444,7 @@ namespace DotNetNuke.UI.Skins
                 // Versioning checks.
                 if (!TabController.CurrentPage.HasAVisibleVersion)
                 {
-                    Response.Redirect(Globals.NavigateURL(PortalSettings.ErrorPage404, string.Empty, "status=404"));
+                    HandleAccesDenied(true);
                 }
 
                 int urlVersion;
@@ -453,8 +452,7 @@ namespace DotNetNuke.UI.Skins
                 {
                     if (!TabVersionUtils.CanSeeVersionedPages())
                     {
-                        AddPageMessage(this, "", Localization.GetString("TabAccess.Error"),
-                            ModuleMessage.ModuleMessageType.YellowWarning);
+                        HandleAccesDenied(false);
                         return true;
                     }
 
@@ -476,7 +474,7 @@ namespace DotNetNuke.UI.Skins
                     }
                     else
                     {
-                        AddPageMessage(this, "", Localization.GetString("TabAccess.Error"), ModuleMessage.ModuleMessageType.YellowWarning);
+                        HandleAccesDenied(false);
                     }
                 }
                 else
@@ -491,11 +489,13 @@ namespace DotNetNuke.UI.Skins
             {
 				//If request localized page which haven't complete translate yet, redirect to default language version.
 	            var redirectUrl = Globals.AccessDeniedURL(Localization.GetString("TabAccess.Error"));
-				Locale defaultLocale = LocaleController.Instance.GetDefaultLocale(PortalSettings.PortalId);
+                
+                // Current locale will use default if did'nt find any
+                Locale currentLocale = LocaleController.Instance.GetCurrentLocale(PortalSettings.PortalId);
 	            if (PortalSettings.ContentLocalizationEnabled &&
-	                TabController.CurrentPage.CultureCode != defaultLocale.Code)
+	                TabController.CurrentPage.CultureCode != currentLocale.Code)
 	            {
-		            redirectUrl = new LanguageTokenReplace {Language = defaultLocale.Code}.ReplaceEnvironmentTokens("[URL]");
+		            redirectUrl = new LanguageTokenReplace {Language = currentLocale.Code}.ReplaceEnvironmentTokens("[URL]");
 	            }
 
 				Response.Redirect(redirectUrl, true);

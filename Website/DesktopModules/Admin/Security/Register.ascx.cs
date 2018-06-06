@@ -2,7 +2,7 @@
 
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -24,6 +24,7 @@
 #region Usings
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -117,7 +118,9 @@ namespace DotNetNuke.Modules.Admin.Users
 			}
 		}
 
-		#endregion
+	    protected override bool AddUser { get; } = true;
+
+	    #endregion
 
 		#region Event Handlers
 
@@ -245,7 +248,7 @@ namespace DotNetNuke.Modules.Admin.Users
 				Context.ApplicationInstance.CompleteRequest();
 			}
 
-			cancelLink.NavigateUrl = GetRedirectUrl(false);
+			cancelLink.NavigateUrl = closeLink.NavigateUrl = GetRedirectUrl(false);
 			registerButton.Click += registerButton_Click;
 
 			if (PortalSettings.Registration.UseAuthProviders)
@@ -527,8 +530,7 @@ namespace DotNetNuke.Modules.Admin.Users
 					{
 						RegistrationForm.Visible = false;
 						registerButton.Visible = false;
-						cancelLink.Attributes["resourcekey"] = "Close";
-						RegistrationForm.Parent.Controls.Add(cancelLink);
+					    closeLink.Visible = true;
 					}
 				}
 				else
@@ -559,12 +561,31 @@ namespace DotNetNuke.Modules.Admin.Users
 		    }
 
 			CreateStatus = UserCreateStatus.AddUser;
-			var portalSecurity = new PortalSecurity();
+			var portalSecurity = PortalSecurity.Instance;
 
-			//Check User Editor
-			bool _IsValid = userForm.IsValid;
+            //Check User Editor
+            bool _IsValid = userForm.IsValid;
 
-			if (PortalSettings.Registration.RegistrationFormType == 0)
+		    if (_IsValid)
+		    {
+                var name = User.Username;
+                var cleanUsername = PortalSecurity.Instance.InputFilter(name,
+                                                      PortalSecurity.FilterFlag.NoScripting |
+                                                      PortalSecurity.FilterFlag.NoAngleBrackets |
+                                                      PortalSecurity.FilterFlag.NoMarkup);
+
+                if (!cleanUsername.Equals(name))
+                {
+                    CreateStatus = UserCreateStatus.InvalidUserName;
+                }
+                
+		        var valid = UserController.Instance.IsValidUserName(name); 
+
+		        if (!valid)
+		            CreateStatus = UserCreateStatus.InvalidUserName;
+		    }
+
+            if (PortalSettings.Registration.RegistrationFormType == 0)
 			{
 				//Update UserName
 				if (PortalSettings.Registration.UseEmailAsUserName)
@@ -729,7 +750,7 @@ namespace DotNetNuke.Modules.Admin.Users
 			return _IsValid;
 		}
 
-		private string GetRedirectUrl(bool checkSetting = true)
+        private string GetRedirectUrl(bool checkSetting = true)
 		{
 			var redirectUrl = "";
 			var redirectAfterRegistration = PortalSettings.Registration.RedirectAfterRegistration;

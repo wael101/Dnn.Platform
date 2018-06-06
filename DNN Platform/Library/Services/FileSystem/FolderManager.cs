@@ -1,7 +1,7 @@
 ﻿#region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -57,7 +57,8 @@ namespace DotNetNuke.Services.FileSystem
         private static readonly Dictionary<int, SyncFolderData> SyncFoldersData = new Dictionary<int, SyncFolderData>();
         private const string DefaultUsersFoldersPath = "Users";
         private const string DefaultMappedPathSetting = "DefaultMappedPath";
-        
+        private static readonly object _threadLocker = new object();
+
         #region Public Properties
 
         public virtual string MyFolderName
@@ -928,6 +929,9 @@ namespace DotNetNuke.Services.FileSystem
             //Update database
             UpdateChildFolders(folder, newFolderPath);
 
+            //Files in cache are obsolete because their physical path is not correct after rename
+            DeleteFilesFromCache(folder.PortalID, newFolderPath);
+
             // Notify folder renamed event
             OnFolderRenamed(folder, GetCurrentUserId(), currentFolderName);
         }
@@ -995,6 +999,7 @@ namespace DotNetNuke.Services.FileSystem
 
             int? scriptTimeOut = null;
 
+            Monitor.Enter(_threadLocker);
             try
             {
                 if (HttpContext.Current != null)
@@ -1031,6 +1036,8 @@ namespace DotNetNuke.Services.FileSystem
             }
             finally
             {
+                Monitor.Exit(_threadLocker);
+
                 // Restore original time-out
                 if (HttpContext.Current != null && scriptTimeOut != null)
                 {
@@ -1127,16 +1134,16 @@ namespace DotNetNuke.Services.FileSystem
             FolderPermissionCollection permissions = null;
             if (SyncFoldersData.ContainsKey(threadId))
             {
-                if (SyncFoldersData[threadId].FolderPath == relativePath)
+                if (SyncFoldersData[threadId].FolderPath == relativePath && SyncFoldersData[threadId].PortalId == portalId)
                 {
                     return SyncFoldersData[threadId].Permissions;
                 }                
                 permissions = FolderPermissionController.GetFolderPermissionsCollectionByFolder(portalId, relativePath);
-                SyncFoldersData[threadId] = new SyncFolderData {FolderPath = relativePath, Permissions = permissions};
+                SyncFoldersData[threadId] = new SyncFolderData {PortalId = portalId, FolderPath = relativePath, Permissions = permissions};
                 return permissions;
             }
             permissions = FolderPermissionController.GetFolderPermissionsCollectionByFolder(portalId, relativePath);
-            SyncFoldersData.Add(threadId, new SyncFolderData{FolderPath = relativePath, Permissions = permissions});
+            SyncFoldersData.Add(threadId, new SyncFolderData{ PortalId = portalId, FolderPath = relativePath, Permissions = permissions});
             
             return permissions;
         }
@@ -1950,18 +1957,18 @@ namespace DotNetNuke.Services.FileSystem
             var permissions = FolderPermissionController.GetFolderPermissionsCollectionByFolder(portalId, relativePath);
             if (SyncFoldersData.ContainsKey(threadId))
             {
-                if (SyncFoldersData[threadId].FolderPath == relativePath)
+                if (SyncFoldersData[threadId].FolderPath == relativePath && SyncFoldersData[threadId].PortalId == portalId)
                 {
                     SyncFoldersData[threadId].Permissions = permissions;
                 }
                 else
                 {
-                    SyncFoldersData[threadId] = new SyncFolderData { FolderPath = relativePath, Permissions = permissions };
+                    SyncFoldersData[threadId] = new SyncFolderData { PortalId = portalId, FolderPath = relativePath, Permissions = permissions };
                 }
             }
             else
             {
-                SyncFoldersData.Add(threadId, new SyncFolderData{ FolderPath = relativePath, Permissions = permissions});                
+                SyncFoldersData.Add(threadId, new SyncFolderData{ PortalId = portalId, FolderPath = relativePath, Permissions = permissions});                
             }
         }
 
@@ -2272,6 +2279,7 @@ namespace DotNetNuke.Services.FileSystem
 
     class SyncFolderData
     {
+        public int PortalId { get; set; }
         public string FolderPath { get; set; }
         public FolderPermissionCollection Permissions { get; set; }
     }

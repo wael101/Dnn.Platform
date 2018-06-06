@@ -1,7 +1,7 @@
 #region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -27,6 +27,7 @@ using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Web;
 using System.Xml;
 using System.Xml.Serialization;
@@ -546,27 +547,28 @@ namespace DotNetNuke.Entities.Modules
                             c =>
                             {
                                 var tabModuleSettingsDic = new Dictionary<int, Hashtable>();
-                                IDataReader dr = DataProvider.Instance().GetTabModuleSettingsByTab(tabId);
-                                while (dr.Read())
+                                using (IDataReader dr = DataProvider.Instance().GetTabModuleSettingsByTab(tabId))
                                 {
-                                    int tMId = dr.GetInt32(0);
-                                    Hashtable settings;
-                                    if (!tabModuleSettingsDic.TryGetValue(tMId, out settings))
+                                    while (dr.Read())
                                     {
-                                        settings = new Hashtable();
-                                        tabModuleSettingsDic[tMId] = settings;
-                                    }
+                                        int tMId = dr.GetInt32(0);
+                                        Hashtable settings;
+                                        if (!tabModuleSettingsDic.TryGetValue(tMId, out settings))
+                                        {
+                                            settings = new Hashtable();
+                                            tabModuleSettingsDic[tMId] = settings;
+                                        }
 
-                                    if (!dr.IsDBNull(2))
-                                    {
-                                        settings[dr.GetString(1)] = dr.GetString(2);
-                                    }
-                                    else
-                                    {
-                                        settings[dr.GetString(1)] = "";
+                                        if (!dr.IsDBNull(2))
+                                        {
+                                            settings[dr.GetString(1)] = dr.GetString(2);
+                                        }
+                                        else
+                                        {
+                                            settings[dr.GetString(1)] = "";
+                                        }
                                     }
                                 }
-                                CBO.CloseDataReader(dr, true);
                                 return tabModuleSettingsDic;
                             });
 
@@ -651,8 +653,10 @@ namespace DotNetNuke.Entities.Modules
                                              newModule.CultureCode,
                                              currentUser.UserID);
 
-				//Copy each setting to the new TabModule instance
-				foreach (DictionaryEntry setting in settings)
+                DataCache.RemoveCache(string.Format(DataCache.SingleTabModuleCacheKey, newModule.TabModuleID));
+
+                //Copy each setting to the new TabModule instance
+                foreach (DictionaryEntry setting in settings)
 				{
 					UpdateModuleSetting(newModule.ModuleID, Convert.ToString(setting.Key), Convert.ToString(setting.Value));
 				}
@@ -665,11 +669,20 @@ namespace DotNetNuke.Entities.Modules
                         var portableModule = businessController as IPortable;
                         if (portableModule != null)
                         {
-                            string moduleContent = portableModule.ExportModule(sourceModule.ModuleID);
-                            if (!string.IsNullOrEmpty(moduleContent))
+                            try
                             {
-                                portableModule.ImportModule(newModule.ModuleID, moduleContent, newModule.DesktopModule.Version, currentUser.UserID);
+                                SetCloneModuleContext(true);
+                                string moduleContent = portableModule.ExportModule(sourceModule.ModuleID);
+                                if (!string.IsNullOrEmpty(moduleContent))
+                                {
+                                    portableModule.ImportModule(newModule.ModuleID, moduleContent, newModule.DesktopModule.Version, currentUser.UserID);
+                                }
                             }
+                            finally
+                            {
+                                SetCloneModuleContext(false);
+                            }
+                            
                         }
                     }
                     catch (Exception ex)
@@ -686,6 +699,12 @@ namespace DotNetNuke.Entities.Modules
             }
 
             return moduleId;
+        }
+
+        private static void SetCloneModuleContext(bool cloneModuleContext)
+        {
+            Thread.SetData(Thread.GetNamedDataSlot("CloneModuleContext"),
+                cloneModuleContext ? bool.TrueString : bool.FalseString);
         }
 
         private static Hashtable ParsedLocalizedModuleGuid
@@ -807,7 +826,7 @@ namespace DotNetNuke.Entities.Modules
             if (moduleInfo != null)
             {
                 //delete the module instance for the tab
-                dataProvider.DeleteTabModule(moduleInfo.TabID, moduleInfo.ModuleID, softDelete);
+                dataProvider.DeleteTabModule(moduleInfo.TabID, moduleInfo.ModuleID, softDelete, UserController.Instance.GetCurrentUserInfo().UserID);
                 var log = new LogInfo { LogTypeKey = EventLogController.EventLogType.TABMODULE_DELETED.ToString() };
                 log.LogProperties.Add(new LogDetailInfo("tabId", moduleInfo.TabID.ToString(CultureInfo.InvariantCulture)));
                 log.LogProperties.Add(new LogDetailInfo("moduleId", moduleInfo.ModuleID.ToString(CultureInfo.InvariantCulture)));
@@ -830,7 +849,8 @@ namespace DotNetNuke.Entities.Modules
                     //hard delete the module
                     DeleteModule(moduleInfo.ModuleID);
                 }
-
+                
+                DataCache.RemoveCache(string.Format(DataCache.SingleTabModuleCacheKey, moduleInfo.TabModuleID));
                 ClearCache(moduleInfo.TabID);
             }
         }
@@ -1136,7 +1156,7 @@ namespace DotNetNuke.Entities.Modules
                         var newModule = sourceModule.Clone();
                         newModule.ModuleID = Null.NullInteger;
                         newModule.TabID = destinationTab.TabID;
-                        AddModule(sourceModule);
+                        AddModule(newModule);
                     }
                     else
                     {
@@ -1273,7 +1293,10 @@ namespace DotNetNuke.Entities.Modules
             ModuleInfo moduleInfo = GetModule(moduleId, tabId, false);            
             DeleteTabModuleInternal(moduleInfo, softDelete);
             var userId = UserController.Instance.GetCurrentUserInfo().UserID;
-            TabChangeTracker.Instance.TrackModuleDeletion(moduleInfo, Null.NullInteger, userId);
+            if (softDelete)
+            {
+                TabChangeTracker.Instance.TrackModuleDeletion(moduleInfo, Null.NullInteger, userId);
+            }
         }
 
         /// <summary>
@@ -1343,6 +1366,13 @@ namespace DotNetNuke.Entities.Modules
                                                  newModule.LocalizedVersionGuid,
                                                  newModule.CultureCode,
                                                  UserController.Instance.GetCurrentUserInfo().UserID);
+
+                    DataCache.RemoveCache(string.Format(DataCache.SingleTabModuleCacheKey, newModule.TabModuleID));
+
+                    //Update tab version details of old and new modules
+                    var userId = UserController.Instance.GetCurrentUserInfo().UserID;
+                    TabChangeTracker.Instance.TrackModuleDeletion(sourceModule, Null.NullInteger, userId);
+                    TabChangeTracker.Instance.TrackModuleCopy(newModule, Null.NullInteger, newModule.TabID, userId);
 
                     //check if all modules instances have been deleted
                     if (GetModule(sourceModule.ModuleID, Null.NullInteger, true).TabID == Null.NullInteger)
@@ -1799,7 +1829,7 @@ namespace DotNetNuke.Entities.Modules
         {
             dataProvider.RestoreTabModule(objModule.TabID, objModule.ModuleID);
             var userId = UserController.Instance.GetCurrentUserInfo().UserID;
-            TabChangeTracker.Instance.TrackModuleCopy(objModule, 1, objModule.TabID, userId);
+            TabChangeTracker.Instance.TrackModuleAddition(objModule, 1, userId);
             ClearCache(objModule.TabID);
         }
 
@@ -1887,6 +1917,8 @@ namespace DotNetNuke.Entities.Modules
                                              module.CultureCode,
                                              currentUser.UserID);
 
+                DataCache.RemoveCache(string.Format(DataCache.SingleTabModuleCacheKey, module.TabModuleID));
+
                 EventLogController.Instance.AddLog(module, PortalController.Instance.GetCurrentPortalSettings(), currentUser.UserID, "", EventLogController.EventLogType.TABMODULE_UPDATED);
 
                 if (hasModuleOrderOrPaneChanged)
@@ -1962,7 +1994,8 @@ namespace DotNetNuke.Entities.Modules
                                                          targetModule.CultureCode,
                                                          currentUser.UserID);
 
-							ClearCache(targetModule.TabID);
+                            DataCache.RemoveCache(string.Format(DataCache.SingleTabModuleCacheKey, targetModule.TabModuleID));
+                            ClearCache(targetModule.TabID);
                         }
                     }
                 }
@@ -2051,15 +2084,18 @@ namespace DotNetNuke.Entities.Modules
                             var moduleId = Convert.ToInt32(dr2["ModuleID"]);
                             var paneName = Convert.ToString(dr["PaneName"]);
                             var isDeleted = Convert.ToBoolean(dr2["IsDeleted"]);
-                            var moduleOrder = (moduleCounter * 2) - 1;
+                            var existingOrder = Convert.ToInt32(dr2["ModuleOrder"]);
+                            var newOrder = (moduleCounter * 2) - 1;
 
-                            dataProvider.UpdateModuleOrder(tabId, moduleId, moduleOrder, paneName);
+                            if (existingOrder == newOrder) continue;
+                            dataProvider.UpdateModuleOrder(tabId, moduleId, newOrder, paneName);
 
                             if (!isDeleted)
                             {
                                 var moduleInfo = GetModule(moduleId, tabId, true);
                                 var userInfo = UserController.Instance.GetCurrentUserInfo();
-                                TabChangeTracker.Instance.TrackModuleModification(moduleInfo, Null.NullInteger, userInfo.UserID);                                
+                                TabChangeTracker.Instance.TrackModuleModification(moduleInfo, Null.NullInteger,
+                                    userInfo.UserID);
                             }
                         }
                     }
@@ -2094,11 +2130,10 @@ namespace DotNetNuke.Entities.Modules
         /// <remarks>empty SettingValue will relove the setting</remarks>
         public void UpdateTabModuleSetting(int tabModuleId, string settingName, string settingValue)
         {
-            IDataReader dr = null;
+            IDataReader dr = dataProvider.GetTabModuleSetting(tabModuleId, settingName);
             try
             {
                 var currentUser = UserController.Instance.GetCurrentUserInfo();
-                dr = dataProvider.GetTabModuleSetting(tabModuleId, settingName);
                 if (dr.Read())
                 {
                     if (dr.GetString(1) != settingValue)
@@ -2168,7 +2203,7 @@ namespace DotNetNuke.Entities.Modules
             var moduleDefinition = GetModuleDefinition(nodeModule);
 
             // Create dummy pane node for private DeserializeModule method
-            var docPane = new XmlDocument();
+            var docPane = new XmlDocument { XmlResolver = null };
             docPane.LoadXml(String.Format("<pane><name>{0}</name></pane>", module.PaneName));
 
             // Create ModuleInfo of Xml

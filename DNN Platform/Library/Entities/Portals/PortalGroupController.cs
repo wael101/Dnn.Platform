@@ -1,7 +1,7 @@
 ﻿#region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -233,12 +233,20 @@ namespace DotNetNuke.Entities.Portals
 
         private IEnumerable<ModuleInfo> GetSharedModulesWithPortal(PortalInfo portal)
         {
-            return CBO.FillCollection<ModuleInfo>(_dataService.GetSharedModulesWithPortal(portal));
+            return CBO.GetCachedObject<IEnumerable<ModuleInfo>>(new CacheItemArgs(DataCache.SharedModulesWithPortalCacheKey,
+                                                                                DataCache.SharedModulesWithPortalCacheTimeOut,
+                                                                                DataCache.SharedModulesWithPortalCachePriority,
+                                                                                portal),
+            (p) => CBO.FillCollection<ModuleInfo>(_dataService.GetSharedModulesWithPortal(portal)));
         }
 
         private IEnumerable<ModuleInfo> GetSharedModulesByPortal(PortalInfo portal)
         {
-            return CBO.FillCollection<ModuleInfo>(_dataService.GetSharedModulesByPortal(portal));
+            return CBO.GetCachedObject<IEnumerable<ModuleInfo>>(new CacheItemArgs(DataCache.SharedModulesByPortalCacheKey,
+                                                                                DataCache.SharedModulesByPortalCacheTimeOut,
+                                                                                DataCache.SharedModulesByPortalCachePriority,
+                                                                                portal),
+            (p) => CBO.FillCollection<ModuleInfo>(_dataService.GetSharedModulesByPortal(portal)));
         } 
 
         public int AddPortalGroup(PortalGroupInfo portalGroup)

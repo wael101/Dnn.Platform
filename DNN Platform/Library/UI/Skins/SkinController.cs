@@ -1,7 +1,7 @@
 #region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -378,7 +378,7 @@ namespace DotNetNuke.UI.Skins
                         }
                         else
                         {
-                            PortalController.UpdatePortalSetting(portalId, "DefaultAdminSkin", skinSrc, selectedCultureCode);
+                            PortalController.UpdatePortalSetting(portalId, "DefaultAdminSkin", skinSrc, true, selectedCultureCode);
                         }
                     }
                     else
@@ -389,7 +389,7 @@ namespace DotNetNuke.UI.Skins
                         }
                         else
                         {
-                            PortalController.UpdatePortalSetting(portalId, "DefaultPortalSkin", skinSrc, selectedCultureCode);
+                            PortalController.UpdatePortalSetting(portalId, "DefaultPortalSkin", skinSrc, true, selectedCultureCode);
                         }
                     }
                     break;
@@ -402,7 +402,7 @@ namespace DotNetNuke.UI.Skins
                         }
                         else
                         {
-                            PortalController.UpdatePortalSetting(portalId, "DefaultAdminContainer", skinSrc, selectedCultureCode);
+                            PortalController.UpdatePortalSetting(portalId, "DefaultAdminContainer", skinSrc, true, selectedCultureCode);
                         }
                     }
                     else
@@ -413,7 +413,7 @@ namespace DotNetNuke.UI.Skins
                         }
                         else
                         {
-                            PortalController.UpdatePortalSetting(portalId, "DefaultPortalContainer", skinSrc, selectedCultureCode);
+                            PortalController.UpdatePortalSetting(portalId, "DefaultPortalContainer", skinSrc, true, selectedCultureCode);
                         }
                     }
                     break;
@@ -477,27 +477,31 @@ namespace DotNetNuke.UI.Skins
                         //process embedded zip files
 						if (objZipEntry.Name.ToLower() == RootSkin.ToLower() + ".zip")
                         {
-                            var objMemoryStream = new MemoryStream();
-                            intSize = objZipInputStream.Read(arrData, 0, arrData.Length);
-                            while (intSize > 0)
+                            using (var objMemoryStream = new MemoryStream())
                             {
-                                objMemoryStream.Write(arrData, 0, intSize);
                                 intSize = objZipInputStream.Read(arrData, 0, arrData.Length);
+                                while (intSize > 0)
+                                {
+                                    objMemoryStream.Write(arrData, 0, intSize);
+                                    intSize = objZipInputStream.Read(arrData, 0, arrData.Length);
+                                }
+                                objMemoryStream.Seek(0, SeekOrigin.Begin);
+                                strMessage += UploadLegacySkin(rootPath, RootSkin, skinName, objMemoryStream);
                             }
-                            objMemoryStream.Seek(0, SeekOrigin.Begin);
-                            strMessage += UploadLegacySkin(rootPath, RootSkin, skinName, objMemoryStream);
                         }
                         else if (objZipEntry.Name.ToLower() == RootContainer.ToLower() + ".zip")
                         {
-                            var objMemoryStream = new MemoryStream();
-                            intSize = objZipInputStream.Read(arrData, 0, arrData.Length);
-                            while (intSize > 0)
+                            using(var objMemoryStream = new MemoryStream())
                             {
-                                objMemoryStream.Write(arrData, 0, intSize);
                                 intSize = objZipInputStream.Read(arrData, 0, arrData.Length);
+                                while (intSize > 0)
+                                {
+                                    objMemoryStream.Write(arrData, 0, intSize);
+                                    intSize = objZipInputStream.Read(arrData, 0, arrData.Length);
+                                }
+                                objMemoryStream.Seek(0, SeekOrigin.Begin);
+                                strMessage += UploadLegacySkin(rootPath, RootContainer, skinName, objMemoryStream);
                             }
-                            objMemoryStream.Seek(0, SeekOrigin.Begin);
-                            strMessage += UploadLegacySkin(rootPath, RootContainer, skinName, objMemoryStream);
                         }
                         else
                         {
@@ -578,25 +582,6 @@ namespace DotNetNuke.UI.Skins
 
             }
             return strMessage;
-        }
-		
-		#endregion
-
-		#region Obsolete
-
-        [Obsolete("In DotNetNuke 5.0, the Skins are uploaded by using the new Installer")]
-        public static string UploadSkin(string rootPath, string skinRoot, string skinName, string path)
-        {
-            var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read);
-            string strMessage = UploadLegacySkin(rootPath, skinRoot, skinName, fileStream);
-            fileStream.Close();
-            return strMessage;
-        }
-
-        [Obsolete("In DotNetNuke 5.0, the Skins are uploaded by using the new Installer")]
-        public static string UploadSkin(string rootPath, string skinRoot, string skinName, Stream inputStream)
-        {
-            return UploadLegacySkin(rootPath, skinRoot, skinName, inputStream);
         }
 		
 		#endregion

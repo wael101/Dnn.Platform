@@ -1,7 +1,7 @@
 ﻿#region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -50,6 +50,7 @@ namespace DotNetNuke.Services.Social.Messaging.Internal
         internal const string ConstSortColumnFrom = "From";
         internal const string ConstSortColumnSubject = "Subject";
         internal const bool ConstAscending = true;
+        internal const double DefaultMessagingThrottlingInterval = 0.5; //default MessagingThrottlingInterval set to 30 seconds.
 
         #endregion
 
@@ -198,7 +199,7 @@ namespace DotNetNuke.Services.Social.Messaging.Internal
 
             var waitTime = 0;
             // MessagingThrottlingInterval contains the number of MINUTES to wait before sending the next message
-            var interval = GetPortalSettingAsInteger("MessagingThrottlingInterval", sender.PortalID, Null.NullInteger) * 60;
+            var interval = GetPortalSettingAsDouble("MessagingThrottlingInterval", sender.PortalID, DefaultMessagingThrottlingInterval) * 60;
             if (interval > 0 && !IsAdminOrHost(sender))
             {
                 var lastSentMessage = GetLastSentMessage(sender);
@@ -343,26 +344,42 @@ namespace DotNetNuke.Services.Social.Messaging.Internal
 
         public virtual int CheckReplyHasRecipients(int conversationId, int userId)
         {
-            return _dataService.CheckReplyHasRecipients(conversationId, userId);
+            return userId <= 0 ? 0 :
+                conversationId <= 0 ? 0 : _dataService.CheckReplyHasRecipients(conversationId, userId);
         }
 
         public virtual int CountArchivedMessagesByConversation(int conversationId)
         {
-            return _dataService.CountArchivedMessagesByConversation(conversationId);
+            return conversationId <= 0 ? 0 : _dataService.CountArchivedMessagesByConversation(conversationId);
         }
 
         public virtual int CountMessagesByConversation(int conversationId)
         {
-            return _dataService.CountMessagesByConversation(conversationId);
+            return conversationId <= 0 ? 0 : _dataService.CountMessagesByConversation(conversationId);
         }
 
         public virtual int CountConversations(int userId, int portalId)
         {
-            return _dataService.CountTotalConversations(userId, portalId);
+            if (userId <= 0) return 0;
+
+            var cacheKey = string.Format(DataCache.UserNotificationsConversationCountCacheKey, portalId, userId);
+            var cache = CachingProvider.Instance();
+            var cacheObject = cache.GetItem(cacheKey);
+            if (cacheObject is int)
+            {
+                return (int)cacheObject;
+            }
+
+            var count = _dataService.CountTotalConversations(userId, portalId);
+            cache.Insert(cacheKey, count, (DNNCacheDependency)null,
+                DateTime.Now.AddSeconds(DataCache.NotificationsCacheTimeInSec), System.Web.Caching.Cache.NoSlidingExpiration);
+            return count;
         }
 
         public virtual int CountUnreadMessages(int userId, int portalId)
         {
+            if (userId <= 0) return 0;
+
             var cacheKey = string.Format(DataCache.UserNewThreadsCountCacheKey, portalId, userId);
             var cache = CachingProvider.Instance();
             var cacheObject = cache.GetItem(cacheKey);
@@ -379,22 +396,22 @@ namespace DotNetNuke.Services.Social.Messaging.Internal
 
         public virtual int CountSentMessages(int userId, int portalId)
         {
-            return _dataService.CountSentMessages(userId, portalId);
+            return userId <= 0 ? 0 : _dataService.CountSentMessages(userId, portalId);
         }
 
         public virtual int CountArchivedMessages(int userId, int portalId)
         {
-            return _dataService.CountArchivedMessages(userId, portalId);
+            return userId <= 0 ? 0 : _dataService.CountArchivedMessages(userId, portalId);
         }
 
         public virtual int CountSentConversations(int userId, int portalId)
         {
-            return _dataService.CountSentConversations(userId, portalId);
+            return userId <= 0 ? 0 : _dataService.CountSentConversations(userId, portalId);
         }
 
         public virtual int CountArchivedConversations(int userId, int portalId)
         {
-            return _dataService.CountArchivedConversations(userId, portalId);
+            return userId <= 0 ? 0 : _dataService.CountArchivedConversations(userId, portalId);
         }
 
         /// <summary>Gets the attachments.</summary>
@@ -402,7 +419,7 @@ namespace DotNetNuke.Services.Social.Messaging.Internal
         /// <returns>A list of message attachments for the given message</returns>
         public IEnumerable<MessageFileView> GetAttachments(int messageId)
         {
-           return this._dataService.GetMessageAttachmentsByMessage(messageId);
+           return _dataService.GetMessageAttachmentsByMessage(messageId);
         }
 
         #endregion
@@ -424,6 +441,11 @@ namespace DotNetNuke.Services.Social.Messaging.Internal
             return PortalController.GetPortalSettingAsInteger(key, portalId, defaultValue);
         }
 
+        internal virtual double GetPortalSettingAsDouble(string key, int portalId, double defaultValue)
+        {
+            return PortalController.GetPortalSettingAsDouble(key, portalId, defaultValue);
+        }
+
         internal virtual string GetPortalSetting(string settingName, int portalId, string defaultValue)
         {
             return PortalController.GetPortalSetting(settingName, portalId, defaultValue);
@@ -436,7 +458,7 @@ namespace DotNetNuke.Services.Social.Messaging.Internal
 
         internal virtual string InputFilter(string input)
         {
-            var ps = new PortalSecurity();
+            var ps = PortalSecurity.Instance;
             return ps.InputFilter(input, PortalSecurity.FilterFlag.NoProfanity);
         }
 

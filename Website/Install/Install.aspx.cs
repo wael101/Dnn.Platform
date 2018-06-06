@@ -1,7 +1,7 @@
 #region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -254,6 +254,11 @@ namespace DotNetNuke.Services.Install
         { 
             try
             {
+                if (Upgrade.Upgrade.RemoveInvalidAntiForgeryCookie())
+                {
+                    Response.Redirect(Request.RawUrl, true);
+                }
+
                 var databaseVersion = DataProvider.Instance().GetVersion();
 
                 //Start Timer
@@ -381,7 +386,7 @@ namespace DotNetNuke.Services.Install
             string strNewFile = Globals.ApplicationMapPath + "\\Install\\Portal\\Portals.resources";
             if (File.Exists(strNewFile))
             {
-                XmlDocument xmlDoc = new XmlDocument();
+                XmlDocument xmlDoc = new XmlDocument { XmlResolver = null };
                 xmlDoc.Load(strNewFile);
 
                 //parse portal(s) if available
@@ -453,41 +458,43 @@ namespace DotNetNuke.Services.Install
                 //get current database version
                 try
                 {
-                    IDataReader dr = DataProvider.Instance().GetDatabaseVersion();
-                    if (dr.Read())
+                    using (var dr = DataProvider.Instance().GetDatabaseVersion())
                     {
-                        //Write out Header
-                        HtmlUtils.WriteHeader(Response, "none");
-                        string currentAssembly = DotNetNukeContext.Current.Application.Version.ToString(3);
-                        string currentDatabase = dr["Major"] + "." + dr["Minor"] + "." + dr["Build"];
-                        //do not show versions if the same to stop information leakage
-                        if (currentAssembly == currentDatabase)
+                        if (dr.Read())
                         {
-                            Response.Write("<h2>Current Assembly Version && current Database Version are identical.</h2>");
+                            //Write out Header
+                            HtmlUtils.WriteHeader(Response, "none");
+                            string currentAssembly = DotNetNukeContext.Current.Application.Version.ToString(3);
+                            string currentDatabase = dr["Major"] + "." + dr["Minor"] + "." + dr["Build"];
+                            //do not show versions if the same to stop information leakage
+                            if (currentAssembly == currentDatabase)
+                            {
+                                Response.Write("<h2>Current Assembly Version && current Database Version are identical.</h2>");
+                            }
+                            else
+                            {
+                                Response.Write("<h2>Current Assembly Version: " + currentAssembly + "</h2>");
+                                //Call Upgrade with the current DB Version to upgrade an
+                                //existing DNN installation
+                                var strDatabaseVersion = ((int)dr["Major"]).ToString("00") + "." + ((int)dr["Minor"]).ToString("00") + "." + ((int)dr["Build"]).ToString("00");
+                                Response.Write("<h2>Current Database Version: " + strDatabaseVersion + "</h2>");
+                            }
+
+                            Response.Write("<br><br><a href='Install.aspx?mode=Install'>Click Here To Upgrade DotNetNuke</a>");
+                            Response.Flush();
                         }
                         else
                         {
-                            Response.Write("<h2>Current Assembly Version: " + currentAssembly + "</h2>");
-                            //Call Upgrade with the current DB Version to upgrade an
-                            //existing DNN installation
-                            var strDatabaseVersion = ((int)dr["Major"]).ToString("00") + "." + ((int)dr["Minor"]).ToString("00") + "." + ((int)dr["Build"]).ToString("00");
-                            Response.Write("<h2>Current Database Version: " + strDatabaseVersion + "</h2>");
+                            //Write out Header
+                            HtmlUtils.WriteHeader(Response, "noDBVersion");
+                            Response.Write("<h2>Current Assembly Version: " + DotNetNukeContext.Current.Application.Version.ToString(3) + "</h2>");
+
+                            Response.Write("<h2>Current Database Version: N/A</h2>");
+                            Response.Write("<br><br><h2><a href='Install.aspx?mode=Install'>Click Here To Install DotNetNuke</a></h2>");
+                            Response.Flush();
                         }
-
-                        Response.Write("<br><br><a href='Install.aspx?mode=Install'>Click Here To Upgrade DotNetNuke</a>");
-                        Response.Flush();
+                        dr.Close();
                     }
-                    else
-                    {
-                        //Write out Header
-                        HtmlUtils.WriteHeader(Response, "noDBVersion");
-                        Response.Write("<h2>Current Assembly Version: " + DotNetNukeContext.Current.Application.Version.ToString(3) + "</h2>");
-
-                        Response.Write("<h2>Current Database Version: N/A</h2>");
-                        Response.Write("<br><br><h2><a href='Install.aspx?mode=Install'>Click Here To Install DotNetNuke</a></h2>");
-                        Response.Flush();
-                    }
-                    dr.Close();
                 }
                 catch (Exception ex)
                 {
@@ -521,6 +528,12 @@ namespace DotNetNuke.Services.Install
         protected override void OnInit(EventArgs e)
         {
             base.OnInit(e);
+
+            if (Upgrade.Upgrade.UpdateNewtonsoftVersion())
+            {
+                Response.Redirect(Request.RawUrl, true);
+            }
+
             //if previous config deleted create new empty one
             string installConfig = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Install", "DotNetNuke.install.config");
             if (!File.Exists(installConfig))

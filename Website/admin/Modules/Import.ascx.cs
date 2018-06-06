@@ -2,7 +2,7 @@
 
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -86,7 +86,7 @@ namespace DotNetNuke.Modules.Admin.Modules
                         var objObject = Reflection.CreateObject(Module.DesktopModule.BusinessControllerClass, Module.DesktopModule.BusinessControllerClass);
                         if (objObject is IPortable)
                         {
-                            var xmlDoc = new XmlDocument();
+                            var xmlDoc = new XmlDocument { XmlResolver = null };
                             try
                             {
                                 var content = XmlUtils.RemoveInvalidXmlCharacters(txtContent.Text);

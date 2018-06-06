@@ -2,7 +2,7 @@
 
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -121,7 +121,7 @@ namespace DotNetNuke.Services.Upgrade.Internals
             }
 
             //Load Template
-            var installTemplate = new XmlDocument();
+            var installTemplate = new XmlDocument { XmlResolver = null };
             Upgrade.GetInstallTemplate(installTemplate);
             XmlNode dotnetnukeNode = installTemplate.SelectSingleNode("//dotnetnuke");
 
@@ -231,10 +231,11 @@ namespace DotNetNuke.Services.Upgrade.Internals
                 {
                     settingsNode = AppendNewXmlNode(ref installTemplate, ref dotnetnukeNode, "settings", null);
                 }
-                else
-                {
-                    settingsNode.RemoveAll();
-                }
+                // DNN-8833: for this node specifically we should append/overwrite existing but not clear all
+                //else
+                //{
+                //    settingsNode.RemoveAll();
+                //}
 
                 foreach (HostSettingConfig setting in installConfig.Settings)
                 {
@@ -282,7 +283,7 @@ namespace DotNetNuke.Services.Upgrade.Internals
             {
                 return;
             }
-            var installTemplate = new XmlDocument();
+            var installTemplate = new XmlDocument { XmlResolver = null };
             Upgrade.GetInstallTemplate(installTemplate);
             XmlNodeList nodes = installTemplate.SelectNodes(xmlNodePath);
             if (nodes != null && nodes.Count > 0 && nodes[0].ParentNode != null)
@@ -301,7 +302,7 @@ namespace DotNetNuke.Services.Upgrade.Internals
             var installConfig = new InstallConfig();
 
             //Load Template
-            var installTemplate = new XmlDocument();
+            var installTemplate = new XmlDocument { XmlResolver = null };
             Upgrade.GetInstallTemplate(installTemplate);
 
             //Parse the root node
@@ -309,6 +310,8 @@ namespace DotNetNuke.Services.Upgrade.Internals
             if (rootNode != null)
             {
                 installConfig.Version = XmlUtils.GetNodeValue(rootNode.CreateNavigator(), "version");
+                installConfig.SupportLocalization = XmlUtils.GetNodeValueBoolean(rootNode.CreateNavigator(), "supportLocalization");
+                installConfig.DisplayBanners = XmlUtils.GetNodeValueBoolean(rootNode.CreateNavigator(), "displayBanners");
                 installConfig.InstallCulture = XmlUtils.GetNodeValue(rootNode.CreateNavigator(), "installCulture") ?? Localization.Localization.SystemLocale;
             }
 

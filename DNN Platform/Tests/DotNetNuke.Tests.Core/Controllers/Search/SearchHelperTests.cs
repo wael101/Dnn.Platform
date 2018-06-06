@@ -1,7 +1,7 @@
 ﻿#region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -418,19 +418,19 @@ namespace DotNetNuke.Tests.Core.Controllers.Search
             Assert.AreEqual(expected, analyzed);
         }
 
-        //[Test]
-        //public void SearchHelper_Rephrase_##()
-        //{
-        //    //Arrange            
-        //    const string inPhrase = "";
-        //    const string expected = "";
+        [Test]
+        //Arrange
+        [TestCase("Cäu","(Cau OR Cau*)")]
+        [TestCase("Cäutätörül", "(Cautatorul OR Cautatorul*)")]
+        [TestCase("Ãbcdef", "(Abcdef OR Abcdef*)")]
+        public void SearchHelper_Rephrase_AccentedCharsReplaced_Replaced(string inPhrase, string expected)
+        {
+            //Act
+            var analyzed = _searchHelper.RephraseSearchText(inPhrase, true);
 
-        //    //Act
-        //    var analyzed = _searchHelper.AnalyzeSearchText(inPhrase, false);
-
-        //    //Assert
-        //    Assert.AreEqual(expected, analyzed);
-        //}
+            //Assert
+            Assert.AreEqual(expected, analyzed);
+        }
 
         #endregion
     }

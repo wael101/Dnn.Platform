@@ -1,7 +1,7 @@
 #region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -120,8 +120,8 @@ namespace DotNetNuke.Services.UserProfile
                         if (!FileManager.Instance.FileExists(folder, sizedPhoto))
                         {
                             using (var fileContent = FileManager.Instance.GetFileContent(photoFile))
+                            using (var sizedContent = ImageUtils.CreateImage(fileContent, height, width, extension))
                             {
-                                var sizedContent = ImageUtils.CreateImage(fileContent, height, width, extension);
                                 FileManager.Instance.AddFile(folder, sizedPhoto, sizedContent);
                             }
                         }
@@ -145,9 +145,11 @@ namespace DotNetNuke.Services.UserProfile
 
                     }
 
-                    var memoryStream = new MemoryStream();
-                    content.CopyTo(memoryStream);
-                    memoryStream.WriteTo(context.Response.OutputStream);
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        content.CopyTo(memoryStream);
+                        memoryStream.WriteTo(context.Response.OutputStream);
+                    }
 
                     photoLoaded = true;
                 }

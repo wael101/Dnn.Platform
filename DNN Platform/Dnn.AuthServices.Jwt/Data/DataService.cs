@@ -1,7 +1,7 @@
 #region Copyright
 //
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
@@ -61,7 +61,7 @@ namespace Dnn.AuthServices.Jwt.Data
 
         public virtual void AddToken(PersistedToken token)
         {
-            _dataProvider.ExecuteReader("JsonWebTokens_Add", token.TokenId, token.UserId,
+            _dataProvider.ExecuteNonQuery("JsonWebTokens_Add", token.TokenId, token.UserId,
                 token.TokenExpiry, token.RenewalExpiry, token.TokenHash, token.RenewalHash);
             DataCache.SetCache(GetCacheKey(token.TokenId), token, token.TokenExpiry.ToLocalTime());
         }

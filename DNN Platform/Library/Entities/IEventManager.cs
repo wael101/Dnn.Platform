@@ -1,5 +1,5 @@
 ﻿// DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -69,6 +69,10 @@ namespace DotNetNuke.Entities
         void OnModuleUpdated(ModuleEventArgs args);
 
         void OnPortalCreated(PortalCreatedEventArgs args);
+
+        void OnPortalSettingUpdated(PortalSettingUpdatedEventArgs args);
+
+        void OnPortalTemplateCreated(PortalTemplateEventArgs args);
 
         void OnProfileUpdated(ProfileEventArgs args);
 

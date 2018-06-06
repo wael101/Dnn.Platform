@@ -1,7 +1,7 @@
 #region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -72,7 +72,7 @@ namespace DotNetNuke.UI.Skins
         private readonly Hashtable m_ControlList = new Hashtable();
         private readonly ObjectParser m_ObjectFactory;
         private readonly PathParser m_PathFactory = new PathParser();
-        private readonly XmlDocument m_SkinAttributes = new XmlDocument();
+        private readonly XmlDocument m_SkinAttributes = new XmlDocument { XmlResolver = null };
         private readonly string m_SkinName;
         private readonly string m_SkinPath;
         private readonly string m_SkinRoot;
@@ -338,7 +338,7 @@ namespace DotNetNuke.UI.Skins
         private class ControlParser
         {
             private readonly Hashtable m_ControlList;
-            private XmlDocument m_Attributes = new XmlDocument();
+            private XmlDocument m_Attributes = new XmlDocument { XmlResolver = null };
             private string m_ParseMessages = "";
             private ArrayList m_RegisterList = new ArrayList();
 
@@ -1253,10 +1253,12 @@ namespace DotNetNuke.UI.Skins
 
             private string Read(string FileName)
             {
-                var objStreamReader = new StreamReader(FileName);
-                string strFileContents = objStreamReader.ReadToEnd();
-                objStreamReader.Close();
-                return strFileContents;
+                using (var objStreamReader = new StreamReader(FileName))
+                {
+                    string strFileContents = objStreamReader.ReadToEnd();
+                    objStreamReader.Close();
+                    return strFileContents;
+                }
             }
 
             public void Write()
@@ -1267,10 +1269,12 @@ namespace DotNetNuke.UI.Skins
                     File.Delete(WriteFileName);
                 }
                 m_Messages += SkinController.FormatMessage(FILE_WRITE, Path.GetFileName(WriteFileName), 2, false);
-                var objStreamWriter = new StreamWriter(WriteFileName);
-                objStreamWriter.WriteLine(Contents);
-                objStreamWriter.Flush();
-                objStreamWriter.Close();
+                using (var objStreamWriter = new StreamWriter(WriteFileName))
+                {
+                    objStreamWriter.WriteLine(Contents);
+                    objStreamWriter.Flush();
+                    objStreamWriter.Close();
+                }
             }
 
             /// -----------------------------------------------------------------------------

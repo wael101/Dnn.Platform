@@ -1,7 +1,7 @@
 ﻿#region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -192,10 +192,15 @@ namespace DotNetNuke.Entities.Content.Workflow
         {
             try
             {
+                if (!state.SendNotification)
+                {
+                    return;
+                }
+
                 var user = GetUserThatHaveStartedOrSubmittedDraftState(workflow, contentItem, stateTransaction);
                 if (user == null)
                 {
-                    Services.Exceptions.Exceptions.LogException(new WorkflowException(Localization.GetExceptionMessage("WorkflowAuthorNotFound", "Author cannot be found. Notification won't be sent")));
+                    //Services.Exceptions.Exceptions.LogException(new WorkflowException(Localization.GetExceptionMessage("WorkflowAuthorNotFound", "Author cannot be found. Notification won't be sent")));
                     return;
                 }
 
@@ -227,6 +232,11 @@ namespace DotNetNuke.Entities.Content.Workflow
         {
             try
             {
+                if (!workflow.FirstState.SendNotification)
+                {
+                    return;
+                }
+
                 var workflowAction = GetWorkflowActionInstance(contentItem, workflowActionType);
                 if (workflowAction == null)
                 {

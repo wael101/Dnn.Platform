@@ -1,7 +1,7 @@
 ﻿#region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -38,6 +38,10 @@ using DotNetNuke.Services.Scheduling;
 using DotNetNuke.Services.Search.Entities;
 using DotNetNuke.Entities.Controllers;
 using System.IO;
+using Lucene.Net.Analysis;
+using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Util;
+using Lucene.Net.Analysis.Tokenattributes;
 
 #endregion
 
@@ -51,7 +55,7 @@ namespace DotNetNuke.Services.Search.Internals
         private const string CacheKeyFormat = "{0}_{1}_{2}";
         private const string LastIndexKeyFormat = "{0}_{1}";
         private const string SearchStopWordsCacheKey = "SearchStopWords";
-        private const string ResourceFileRelativePathWithoutExt = "/DesktopModules/Admin/SearchAdmin/App_LocalResources/SearchAdmin.ascx";
+        private const string ResourceFileRelativePathWithoutExt = "/App_GlobalResources/GlobalResources";
         private readonly IList<string> _emptySynonums = new List<string>(0);
 
         #region SearchType APIs
@@ -420,9 +424,9 @@ namespace DotNetNuke.Services.Search.Internals
             {
                 return searchPhrase;
             }
-
+            
             // we have a quotation marks and/or wildcard search, adjust accordingly
-            var chars = searchPhrase.ToArray();
+            var chars = FoldToASCII(searchPhrase).ToCharArray();
             var insideQuote = false;
             var newPhraseBulder = new StringBuilder();
             var currentWord = new StringBuilder();
@@ -688,6 +692,26 @@ namespace DotNetNuke.Services.Search.Internals
             EnsurePortalDefaultsAreSet(portalId);
 
             return CBO.FillCollection<SynonymsGroup>(DataProvider.Instance().GetAllSynonymsGroups(portalId, cultureCode));
+        }
+        
+        private string FoldToASCII(string searchPhrase)
+        {
+            var sb = new StringBuilder();
+
+            var cleanedPhrase = searchPhrase.Trim('\0');
+            
+            var asciiFilter = new ASCIIFoldingFilter(new WhitespaceTokenizer((TextReader)new StringReader(cleanedPhrase)));
+
+            string space = string.Empty;
+            while(asciiFilter.IncrementToken())
+            {
+                sb.AppendFormat("{0}{1}", space ?? "", asciiFilter.GetAttribute<ITermAttribute>().Term);
+                if (string.IsNullOrEmpty(space))
+                {
+                    space = " ";
+                }
+            }
+            return sb.ToString();
         }
 
         #endregion

@@ -1,7 +1,7 @@
 #region Copyright
 // 
 // DotNetNuke® - http://www.dotnetnuke.com
-// Copyright (c) 2002-2016
+// Copyright (c) 2002-2018
 // by DotNetNuke Corporation
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated 
@@ -34,6 +34,7 @@ using DotNetNuke.Entities.Modules;
 using DotNetNuke.Entities.Portals;
 using DotNetNuke.Entities.Tabs;
 using DotNetNuke.Instrumentation;
+using DotNetNuke.Security.Permissions;
 using DotNetNuke.Services.Localization;
 
 #endregion
@@ -209,8 +210,9 @@ namespace DotNetNuke.Services.Cache
             // here so we remove them using a prefix
             var folderUserCachePrefix = GetCacheKey(string.Format("Folders|{0}|", portalId));
             ClearCacheInternal(folderUserCachePrefix, clearRuntime);
-            
-            RemoveFormattedCacheKey(DataCache.FolderPermissionCacheKey, clearRuntime, portalId);
+
+            PermissionProvider.ResetCacheDependency(portalId,
+                () => RemoveFormattedCacheKey(DataCache.FolderPermissionCacheKey, clearRuntime, portalId));
         }
 
         private void ClearHostCacheInternal(bool clearRuntime)
@@ -538,74 +540,5 @@ namespace DotNetNuke.Services.Cache
         }
 
 		#endregion
-
-        #region Obsolete Methods
-
-        [Obsolete("Deprecated in DNN 5.1 - Use one of the INsert methods")]
-        public virtual object Add(string CacheKey, object objObject, CacheDependency objDependency, DateTime AbsoluteExpiration, TimeSpan SlidingExpiration, CacheItemPriority Priority, CacheItemRemovedCallback OnRemoveCallback)
-        {
-            object retValue = GetItem(CacheKey);
-            if (retValue == null)
-            {
-                Insert(CacheKey, objObject, new DNNCacheDependency(objDependency), AbsoluteExpiration, SlidingExpiration, Priority, OnRemoveCallback);
-            }
-            return retValue;
-        }
-
-        [Obsolete("Deprecated in DNN 5.1 - Cache Persistence is not supported")]
-        public virtual object GetPersistentCacheItem(string CacheKey, Type objType)
-        {
-            return GetItem(CacheKey);
-        }
-
-        [Obsolete("Deprecated in DNN 5.1 - Cache Persistence is not supported")]
-        public virtual void Insert(string cacheKey, object itemToCache, bool PersistAppRestart)
-        {
-            Insert(cacheKey, itemToCache);
-        }
-
-        [Obsolete("Deprecated in DNN 5.1 - Cache Persistence is not supported")]
-        public virtual void Insert(string cacheKey, object itemToCache, CacheDependency objDependency, bool PersistAppRestart)
-        {
-            Insert(cacheKey, itemToCache, new DNNCacheDependency(objDependency), System.Web.Caching.Cache.NoAbsoluteExpiration, System.Web.Caching.Cache.NoSlidingExpiration, CacheItemPriority.Default, null);
-        }
-
-        [Obsolete("Deprecated in DNN 5.1 - Cache Persistence is not supported")]
-        public virtual void Insert(string cacheKey, object itemToCache, CacheDependency objDependency, DateTime absoluteExpiration, TimeSpan slidingExpiration, bool PersistAppRestart)
-        {
-            Insert(cacheKey, itemToCache, new DNNCacheDependency(objDependency), absoluteExpiration, slidingExpiration, CacheItemPriority.Default, null);
-        }
-
-        [Obsolete("Deprecated in DNN 5.1 - Cache Persistence is not supported")]
-        public virtual void Insert(string Key, object itemToCache, CacheDependency objDependency, DateTime absoluteExpiration, TimeSpan slidingExpiration, CacheItemPriority priority, CacheItemRemovedCallback onRemoveCallback, bool PersistAppRestart)
-        {
-            Insert(Key, itemToCache, new DNNCacheDependency(objDependency), absoluteExpiration, slidingExpiration, priority, onRemoveCallback);
-        }
-
-        [Obsolete("Deprecated in DNN 5.1 - Use new overload that uses a DNNCacheDependency")]
-        public virtual void Insert(string cacheKey, object itemToCache, CacheDependency objDependency)
-        {
-            Insert(cacheKey, itemToCache, new DNNCacheDependency(objDependency), System.Web.Caching.Cache.NoAbsoluteExpiration, System.Web.Caching.Cache.NoSlidingExpiration, CacheItemPriority.Default, null);
-        }
-
-        [Obsolete("Deprecated in DNN 5.1 - Use new overload that uses a DNNCacheDependency")]
-        public virtual void Insert(string cacheKey, object itemToCache, CacheDependency objDependency, DateTime absoluteExpiration, TimeSpan slidingExpiration)
-        {
-            Insert(cacheKey, itemToCache, new DNNCacheDependency(objDependency), absoluteExpiration, slidingExpiration, CacheItemPriority.Default, null);
-        }
-
-        [Obsolete("Deprecated in DNN 5.1 - Use new overload that uses a DNNCacheDependency")]
-        public virtual void Insert(string cacheKey, object itemToCache, CacheDependency objDependency, DateTime absoluteExpiration, TimeSpan slidingExpiration, CacheItemPriority priority, CacheItemRemovedCallback onRemoveCallback)
-        {
-            Insert(cacheKey, itemToCache, new DNNCacheDependency(objDependency), absoluteExpiration, slidingExpiration, priority, onRemoveCallback);
-        }
-
-        [Obsolete("Deprecated in DNN 5.1.1 - Cache Persistence is not supported")]
-        public virtual void RemovePersistentCacheItem(string CacheKey)
-        {
-            Remove(CacheKey);
-        }
-
-        #endregion
     }
 }

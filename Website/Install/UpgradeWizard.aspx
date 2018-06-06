@@ -1,12 +1,15 @@
 <%@ Page Language="C#" AutoEventWireup="false" Inherits="DotNetNuke.Services.Install.UpgradeWizard" Codebehind="UpgradeWizard.aspx.cs" %>
+<%@ Register TagPrefix="dnn" TagName="Label" Src="~/controls/LabelControl.ascx" %>
+
+<%@ Register TagPrefix="dnn" Namespace="DotNetNuke.Web.UI.WebControls.Internal" Assembly="DotNetNuke.Web" %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US">
 <head runat="server">
     <title></title>
     <asp:PlaceHolder runat="server" ID="ClientDependencyHeadCss"></asp:PlaceHolder>
     <asp:PlaceHolder runat="server" ID="ClientDependencyHeadJs"></asp:PlaceHolder>
-    <link rel="stylesheet" type="text/css" class="needVer" href="../Resources/Shared/stylesheets/dnndefault/7.0.0/default.css" />
-    <link rel="stylesheet" type="text/css" class="needVer" href="Install.css" />
+    <link rel="stylesheet" type="text/css" class="needVer" href="../Resources/Shared/stylesheets/dnndefault/7.0.0/default.css?refresh" />
+    <link rel="stylesheet" type="text/css" class="needVer" href="Install.css?refresh" />
     <script type="text/javascript" src="../Resources/Shared/scripts/jquery/jquery.min.js?ver=<%=DotNetNuke.Common.Globals.FormatVersion(ApplicationVersion)%>"></script>
 	<script type="text/javascript" src="../Resources/Shared/scripts/jquery/jquery-migrate.min.js?ver=<%=DotNetNuke.Common.Globals.FormatVersion(ApplicationVersion)%>"></script>
     <script type="text/javascript" src="../Resources/Shared/Scripts/jquery/jquery-ui.min.js?ver=<%=DotNetNuke.Common.Globals.FormatVersion(ApplicationVersion)%>"></script>
@@ -83,11 +86,26 @@
                         <asp:Label ID="lblPassword" runat="server" ControlName="txtPassword" ResourceKey="Password" CssClass="dnnFormRequired dnnLabel" />
                         <asp:TextBox ID="txtPassword" runat="server" TextMode="Password" />
                     </div>
+                    <div id="improvementsProgram" runat="Server" visible="True" class="dnnForm">
+                        <asp:Label id="lblImprovementProgTitle" runat="server" CssClass="tabSubTitle" ResourceKey="ImprovementsProgramTitle" />
+                        <div class="dnnFormItem">
+                            <asp:Label ID="Label2" runat="server" CssClass="dnnLabel" />
+                            <asp:Label ID="lblImprovementProgExplain" runat="server" CssClass="information" ResourceKey="ImprovementProgramExplain" />
+                        </div>
+                        <div class="dnnFormItem information-checkbox">
+                            <asp:CheckBox ID="chkImprovementProgram" runat="server" Checked="True" CssClass="dnnLabel"/>
+                            <asp:Label id="lblImprovementProgram" controlname="chkImprovementProgram" runat="server" ResourceKey="ImprovementProgramLabel" />
+                        </div>
+                    </div>
                     <hr />
-                    <ul class="dnnActions dnnClear">
+                    <ul class="dnnForm dnnActions dnnClear">
                         <li>
-                            <asp:LinkButton ID="continueLink" runat="server" CssClass="dnnPrimaryAction" resourcekey="Next" />
+                            <asp:LinkButton ID="continueLink" runat="server" CssClass="dnnPrimaryAction dnnDisabledAction" resourcekey="Next" />
                         </li>
+                        <li id="pnlAcceptTerms" runat="server" class="accept-terms">
+                        <asp:CheckBox ID="chkAcceptTerms" runat="server" />
+                        <asp:Label runat="server" ResourceKey="AcceptTerms" />
+                    </li>
                     </ul>
                 </div>
                 <div class="upgradeInstallation dnnClear" id="upgradeInstallation">
@@ -117,9 +135,7 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="upgradeViewWebsite dnnClear" id="upgradeViewWebsite"></div>
-
             </div>
         </div>
 
@@ -204,7 +220,7 @@
                 $("link[class=needVer]").each(function(index, item) {
                     $(item).attr("href", $(item).attr("href") + "?<%=DotNetNuke.Common.Globals.FormatVersion(ApplicationVersion)%>");
                 });
-                $("#tabs").bind("tabscreate", function (event, ui) {
+                $("#tabs").on("tabscreate", function (event, ui) {
                     var index = 0, selectedIndex = 0;
                     $('.ui-tabs-nav li', $(this)).each(function () {
                         if ($(this).hasClass('ui-tabs-active'))
@@ -217,7 +233,7 @@
                         $('.dnnWizardStepArrow', $(this)).eq(selectedIndex - 1).css('background-position', '0 -201px');
                 });
 
-                $("#tabs").bind("tabsactivate", function (event, ui) {
+                $("#tabs").on("tabsactivate", function (event, ui) {
                     var index = ui.newTab.index();
                     $('.dnnWizardStepArrow', $(this)).css('background-position', '0 -401px');
                     $('.dnnWizardStepArrow', $(this)).eq(index).css('background-position', '0 -299px');
@@ -238,26 +254,43 @@
             //****************************************************************************************
             // EVENT HANDLER FUNCTIONS
             //****************************************************************************************
-            //Next Step
-            $('#<%= continueLink.ClientID %>').click(function () {
-                upgradeWizard.accountInfo = {
-                    username: $('#<%= txtUsername.ClientID %>')[0].value,
-                    password: $('#<%= txtPassword.ClientID %>')[0].value
-                };
-
-                $('#seeLogs, #visitSite, #retry').addClass('dnnDisabledAction');
-
-                PageMethods.ValidateInput(upgradeWizard.accountInfo, function (result) {
-                    if (result.Item1) {
-                        $('#<%= lblAccountInfoError.ClientID %>').text('');
-                        upgradeWizard.showInstallationTab();
-                        upgradeWizard.upgrade();
+            var $acceptTerms = $('#<%= chkAcceptTerms.ClientID %>');
+            if ($acceptTerms.length) {
+                $acceptTerms.click(function() {
+                    if (!$(this).is(':checked')) {
+                        $("#<%= continueLink.ClientID %>").addClass('dnnDisabledAction');
                     } else {
-                        $('#<%= lblAccountInfoError.ClientID %>').text(result.Item2);
-                        $('#<%= lblAccountInfoError.ClientID %>').css('display', 'block');
-                        setTimeout(function () { $('#<%= lblAccountInfoError.ClientID %>').css('display', 'none') }, 3000);
+                        $("#<%= continueLink.ClientID %>").removeClass('dnnDisabledAction');
                     }
                 });
+            } else {
+                $("#<%= continueLink.ClientID %>").removeClass('dnnDisabledAction');
+            }
+            //Next Step
+            $('#<%= continueLink.ClientID %>').click(function () {
+                
+                if (!$(this).hasClass('dnnDisabledAction')) {
+                    upgradeWizard.accountInfo = {
+                        username: $('#<%= txtUsername.ClientID %>')[0].value,
+                        password: $('#<%= txtPassword.ClientID %>')[0].value,
+                        dnnImprovementProgram: $('#<%= chkImprovementProgram.ClientID %>').is(":checked") ? "Y" : "N",
+                        acceptTerms: $acceptTerms.length === 0 || $acceptTerms.is(":checked") ? "Y" : "N"
+                    };
+
+                    $('#seeLogs, #visitSite, #retry').addClass('dnnDisabledAction');
+
+                    PageMethods.ValidateInput(upgradeWizard.accountInfo, function(result) {
+                        if (result.Item1) {
+                            $('#<%= lblAccountInfoError.ClientID %>').text('');
+                            upgradeWizard.showInstallationTab();
+                            upgradeWizard.upgrade();
+                        } else {
+                            $('#<%= lblAccountInfoError.ClientID %>').text(result.Item2);
+                            $('#<%= lblAccountInfoError.ClientID %>').css('display', 'block');
+                            setTimeout(function() { $('#<%= lblAccountInfoError.ClientID %>').css('display', 'none') }, 3000);
+                        }
+                    });
+                }
 
                 return false;
             });
