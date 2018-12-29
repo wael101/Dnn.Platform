@@ -1,4 +1,6 @@
-#tool nuget:?package=NUnit.ConsoleRunner&version=3.4.0
+#load "local:?path=Build/cake/version.cake"
+#load "local:?path=Build/cake/create-database.cake"
+#load "local:?path=Build/cake/unit-tests.cake"
 //////////////////////////////////////////////////////////////////////
 // ARGUMENTS
 //////////////////////////////////////////////////////////////////////
@@ -7,7 +9,11 @@ var target = Argument("target", "Default");
 var configuration = Argument("configuration", "Release");
 
 var createCommunityPackages = "./Build/BuildScripts/CreateCommunityPackages.build";
-var buildNumber = Argument("buildNumber", "9.2.2");;
+
+var targetBranchCk = Argument("CkBranch", "development");
+var targetBranchCdf = Argument("CdfBranch", "dnn");
+var targetBranchCp = Argument("CpBranch", "development");
+
 
 //////////////////////////////////////////////////////////////////////
 // PREPARATION
@@ -28,8 +34,13 @@ Task("Clean")
     .Does(() =>
 	{
 		CleanDirectory(buildDir);
-		CleanDirectory(artifactDir);
 		CleanDirectory(tempDir);
+	});
+    
+Task("CleanArtifacts")
+    .Does(() =>
+	{
+		CleanDirectory(artifactDir);
 	});
 
 Task("Restore-NuGet-Packages")
@@ -40,41 +51,76 @@ Task("Restore-NuGet-Packages")
 	});
 
 Task("Build")
+    .IsDependentOn("CleanArtifacts")
+    .IsDependentOn("CreateSource")
+
 	.IsDependentOn("CompileSource")
 	
 	.IsDependentOn("CreateInstall")
 	.IsDependentOn("CreateUpgrade")
 	.IsDependentOn("CreateDeploy")
+    .IsDependentOn("CreateSymbols")
+    
+    .Does(() =>
+	{
+
+	});
+    
+Task("BuildWithDatabase")
+    .IsDependentOn("CleanArtifacts")
+    .IsDependentOn("CreateSource")
+
+	.IsDependentOn("CompileSource")
+	
+	.IsDependentOn("CreateInstall")
+	.IsDependentOn("CreateUpgrade")
+	.IsDependentOn("CreateDeploy")
+    .IsDependentOn("CreateSymbols")
+    .IsDependentOn("CreateDatabase")
+    .Does(() =>
+	{
+
+	});
+    
+Task("BuildInstallUpgradeOnly")
+    .IsDependentOn("CleanArtifacts")
+	.IsDependentOn("CompileSource")
+	
+	.IsDependentOn("CreateInstall")
+	.IsDependentOn("CreateUpgrade")
 
     .Does(() =>
 	{
-	
-	
+
 	});
 
 Task("BuildAll")
+    .IsDependentOn("CleanArtifacts")
+    .IsDependentOn("CreateSource")
 	.IsDependentOn("CompileSource")
 
 	.IsDependentOn("ExternalExtensions")
 
 	.IsDependentOn("CreateInstall")
 	.IsDependentOn("CreateUpgrade")
-	.IsDependentOn("CreateDeploy")
-
+    .IsDependentOn("CreateDeploy")
+	.IsDependentOn("CreateSymbols")
+    .IsDependentOn("CreateNugetPackages")
+    
     .Does(() =>
 	{
-	
-	
+
 	});
 
 Task("CompileSource")
+    .IsDependentOn("UpdateDnnManifests")
 	.IsDependentOn("Restore-NuGet-Packages")
 	.Does(() =>
 	{
 		MSBuild(createCommunityPackages, c =>
 		{
 			c.Configuration = configuration;
-			c.WithProperty("BUILD_NUMBER", buildNumber);
+			c.WithProperty("BUILD_NUMBER", GetProductVersion());
 			c.Targets.Add("CompileSource");
 		});
 	});
@@ -88,7 +134,7 @@ Task("CreateInstall")
 		MSBuild(createCommunityPackages, c =>
 		{
 			c.Configuration = configuration;
-			c.WithProperty("BUILD_NUMBER", buildNumber);
+			c.WithProperty("BUILD_NUMBER", GetProductVersion());
 			c.Targets.Add("CreateInstall");
 		});
 	});
@@ -102,27 +148,46 @@ Task("CreateUpgrade")
 		MSBuild(createCommunityPackages, c =>
 		{
 			c.Configuration = configuration;
-			c.WithProperty("BUILD_NUMBER", buildNumber);
+			c.WithProperty("BUILD_NUMBER", GetProductVersion());
 			c.Targets.Add("CreateUpgrade");
 		});
 	});
-
-Task("CreateSource")
+    
+Task("CreateSymbols")
+	.IsDependentOn("CompileSource")
 	.Does(() =>
 	{
 		CreateDirectory("./Artifacts");
-		CleanDirectory("./src/Projects/");
-	
-		using (var process = StartAndReturnProcess("git", new ProcessSettings{Arguments = "clean -xdf --exclude=tools/cake/**"}))
-		{
-			process.WaitForExit();
-			Information("Git Clean Exit code: {0}", process.GetExitCode());
-		};
 	
 		MSBuild(createCommunityPackages, c =>
 		{
 			c.Configuration = configuration;
-			c.WithProperty("BUILD_NUMBER", buildNumber);
+			c.WithProperty("BUILD_NUMBER", GetProductVersion());
+			c.Targets.Add("CreateSymbols");
+		});
+	});   
+    
+    
+
+Task("CreateSource")
+    .IsDependentOn("UpdateDnnManifests")
+	.Does(() =>
+	{
+		
+		CleanDirectory("./src/Projects/");
+	
+		using (var process = StartAndReturnProcess("git", new ProcessSettings{Arguments = "clean -xdf -e tools/ -e .vs/"}))
+		{
+			process.WaitForExit();
+			Information("Git Clean Exit code: {0}", process.GetExitCode());
+		};
+        
+        CreateDirectory("./Artifacts");
+	
+		MSBuild(createCommunityPackages, c =>
+		{
+			c.Configuration = configuration;
+			c.WithProperty("BUILD_NUMBER", GetProductVersion());
 			c.Targets.Add("CreateSource");
 		});
 	});
@@ -136,31 +201,63 @@ Task("CreateDeploy")
 		MSBuild(createCommunityPackages, c =>
 		{
 			c.Configuration = configuration;
-			c.WithProperty("BUILD_NUMBER", buildNumber);
+			c.WithProperty("BUILD_NUMBER", GetProductVersion());
 			c.Targets.Add("CreateDeploy");
 		});
 	});
 
+Task("CreateNugetPackages")
+	.IsDependentOn("CompileSource")
+	.Does(() =>
+	{
+		//look for solutions and start building them
+		var nuspecFiles = GetFiles("./Build/Tools/NuGet/DotNetNuke.*.nuspec");
+	
+		Information("Found {0} nuspec files.", nuspecFiles.Count);
+
+		//basic nuget package configuration
+		var nuGetPackSettings = new NuGetPackSettings
+		{
+			Version = GetBuildNumber(),
+			OutputDirectory = @"./Artifacts/",
+			IncludeReferencedProjects = true,
+			Properties = new Dictionary<string, string>
+			{
+				{ "Configuration", "Release" }
+			}
+		};
+	
+		//loop through each nuspec file and create the package
+		foreach (var spec in nuspecFiles){
+			var specPath = spec.ToString();
+
+			Information("Starting to pack: {0}", specPath);
+			NuGetPack(specPath, nuGetPackSettings);
+		}
+
+
+	});
+
 Task("ExternalExtensions")
+.IsDependentOn("Clean")
     .Does(() =>
 	{
-		CreateDirectory("./src/Projects");
-		CreateDirectory("./src/Projects/Providers");
-		CreateDirectory("./src/Projects/Modules");
+        Information("CK:'{0}', CDF:'{1}', CP:'{2}'", targetBranchCk, targetBranchCdf, targetBranchCp);
 
+    
 		Information("Downloading External Extensions to {0}", buildDirFullPath);
 
+        
+        
 		//ck
-		DownloadFile("https://github.com/DNN-Connect/CKEditorProvider/archive/development.zip", buildDirFullPath + "ckeditor.zip");
+		DownloadFile("https://github.com/DNN-Connect/CKEditorProvider/archive/" + targetBranchCk + ".zip", buildDirFullPath + "ckeditor.zip");
 	
 		//cdf
-		DownloadFile("https://github.com/dnnsoftware/ClientDependency/archive/dnn.zip", buildDirFullPath + "clientdependency.zip");
+		DownloadFile("https://github.com/dnnsoftware/ClientDependency/archive/" + targetBranchCdf + ".zip", buildDirFullPath + "clientdependency.zip");
 
 		//pb
-		DownloadFile("https://github.com/dnnsoftware/Dnn.AdminExperience.Library/archive/development.zip", buildDirFullPath + "Dnn.AdminExperience.Library.zip");
-		DownloadFile("https://github.com/dnnsoftware/Dnn.AdminExperience.Extensions/archive/development.zip", buildDirFullPath + "Dnn.AdminExperience.Extensions.zip");
-		DownloadFile("https://github.com/dnnsoftware/Dnn.EditBar/archive/development.zip", buildDirFullPath + "Dnn.EditBar.zip");
-	
+        Information("Downloading: {0}", "https://github.com/dnnsoftware/Dnn.AdminExperience/archive/" + targetBranchCp + ".zip");
+		DownloadFile("https://github.com/dnnsoftware/Dnn.AdminExperience/archive/" + targetBranchCp + ".zip", buildDirFullPath + "Dnn.AdminExperience.zip");
 
 		Information("Decompressing: {0}", "CK Editor");
 		Unzip(buildDirFullPath + "ckeditor.zip", buildDirFullPath + "Providers/");
@@ -168,15 +265,9 @@ Task("ExternalExtensions")
 		Information("Decompressing: {0}", "CDF");
 		Unzip(buildDirFullPath + "clientdependency.zip", buildDirFullPath + "Modules");
 	
-		Information("Decompressing: {0}", "PersonaBar Library");
-		Unzip(buildDirFullPath + "Dnn.AdminExperience.Library.zip", tempDir);
+		Information("Decompressing: {0}", "Admin Experience");
+		Unzip(buildDirFullPath + "Dnn.AdminExperience.zip", tempDir);
 
-		Information("Decompressing: {0}", "PersonaBar Extension");
-		Unzip(buildDirFullPath + "Dnn.AdminExperience.Extensions.zip", tempDir);
-
-		Information("Decompressing: {0}", "EditBar");
-		Unzip(buildDirFullPath + "Dnn.EditBar.zip", tempDir);
-	
 
 		//look for solutions and start building them
 		var externalSolutions = GetFiles("./src/**/*.sln");
@@ -237,11 +328,12 @@ Task("ExternalExtensions")
 		//CopyFiles("./src/Modules/ClientDependency-dnn/ClientDependency.Core/bin/Release/ClientDependency.Core.*", "./Website/bin");
 	
 		fileCounter = GetFiles("C:\\temp\\x\\*\\Website\\Install\\Module\\*_Install.zip").Count;
-		Information("Copying {1} Artifacts from {0}", "PersonaBar", fileCounter);
+		Information("Copying {1} Artifacts from {0}", "AdminExperience", fileCounter);
 		CopyFiles("C:\\temp\\x\\*\\Website\\Install\\Module\\*_Install.zip", "./Website/Install/Module/");
 	
 	});
-
+    
+    
 Task("Run-Unit-Tests")
     .IsDependentOn("CompileSource")
     .Does(() =>
@@ -263,4 +355,3 @@ Task("Default")
 //////////////////////////////////////////////////////////////////////
 
 RunTarget(target);
-

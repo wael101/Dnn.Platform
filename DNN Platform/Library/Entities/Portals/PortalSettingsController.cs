@@ -217,6 +217,8 @@ namespace DotNetNuke.Entities.Portals
             portalSettings.SearchTabId = portal.SearchTabId;
             portalSettings.ErrorPage404 = portal.Custom404TabId;
             portalSettings.ErrorPage500 = portal.Custom500TabId;
+            portalSettings.TermsTabId = portal.TermsTabId;
+            portalSettings.PrivacyTabId = portal.PrivacyTabId;
             portalSettings.DefaultLanguage = Null.IsNull(portal.DefaultLanguage) ? Localization.SystemLocale : portal.DefaultLanguage;
             portalSettings.HomeDirectory = Globals.ApplicationPath + "/" + portal.HomeDirectory + "/";
             portalSettings.HomeDirectoryMapPath = portal.HomeDirectoryMapPath;
@@ -261,6 +263,8 @@ namespace DotNetNuke.Entities.Portals
             portalSettings.EnablePopUps = settings.GetValueOrDefault("EnablePopUps", true);
             portalSettings.HideLoginControl = settings.GetValueOrDefault("HideLoginControl", false);
             portalSettings.EnableSkinWidgets = settings.GetValueOrDefault("EnableSkinWidgets", true);
+            portalSettings.ShowCookieConsent = settings.GetValueOrDefault("ShowCookieConsent", false);
+            portalSettings.CookieMoreLink = settings.GetValueOrDefault("CookieMoreLink", Null.NullString);
             portalSettings.EnableUrlLanguage = settings.GetValueOrDefault("EnableUrlLanguage", Host.Host.EnableUrlLanguage);
             portalSettings.HideFoldersEnabled = settings.GetValueOrDefault("HideFoldersEnabled", true);
             portalSettings.InlineEditorEnabled = settings.GetValueOrDefault("InlineEditorEnabled", true);
@@ -280,20 +284,20 @@ namespace DotNetNuke.Entities.Portals
 
             portalSettings.ControlPanelSecurity = PortalSettings.ControlPanelPermission.ModuleEditor;
             string setting = settings.GetValueOrDefault("ControlPanelSecurity", "");
-            if (setting.ToUpperInvariant() == "TAB")
+            if (setting.Equals("TAB", StringComparison.InvariantCultureIgnoreCase))
             {
                 portalSettings.ControlPanelSecurity = PortalSettings.ControlPanelPermission.TabEditor;
             }
 
             portalSettings.DefaultControlPanelMode = PortalSettings.Mode.View;
             setting = settings.GetValueOrDefault("ControlPanelMode", "");
-            if (setting.ToUpperInvariant() == "EDIT")
+            if (setting.Equals("EDIT", StringComparison.InvariantCultureIgnoreCase))
             {
                 portalSettings.DefaultControlPanelMode = PortalSettings.Mode.Edit;
             }
 
             setting = settings.GetValueOrDefault("ControlPanelVisibility", "");
-            portalSettings.DefaultControlPanelVisibility = setting.ToUpperInvariant() != "MIN";
+            portalSettings.DefaultControlPanelVisibility = !setting.Equals("MIN", StringComparison.InvariantCultureIgnoreCase);
 
             setting = settings.GetValueOrDefault("TimeZone", "");
             if (!string.IsNullOrEmpty(setting))

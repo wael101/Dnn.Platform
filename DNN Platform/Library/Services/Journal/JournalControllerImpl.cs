@@ -189,7 +189,7 @@ namespace DotNetNuke.Services.Journal
 
         private bool IsImageFile(string fileName)
         {
-            return (Globals.glbImageFileTypes + ",").IndexOf(Path.GetExtension(fileName).ToLowerInvariant().Replace(".", "") + ",") > -1;        
+            return (Globals.glbImageFileTypes + ",").IndexOf(Path.GetExtension(fileName).Replace(".", "") + ",", StringComparison.InvariantCultureIgnoreCase) > -1;        
         }
 
         private bool ThumbnailCallback()
@@ -763,13 +763,13 @@ namespace DotNetNuke.Services.Journal
 
         #region Obsolete Methods
 
-        [Obsolete("Deprecated in DNN 7.2.2. Use SaveJournalItem(JournalItem, ModuleInfo)")]
+        [Obsolete("Deprecated in DNN 7.2.2. Use SaveJournalItem(JournalItem, ModuleInfo). Scheduled removal in v11.0.0.")]
         public void SaveJournalItem(JournalItem journalItem, int tabId)
         {
             SaveJournalItem(journalItem, tabId, Null.NullInteger);
         }
 
-        [Obsolete("Deprecated in DNN 7.2.2. Use UpdateJournalItem(JournalItem, ModuleInfo)")]
+        [Obsolete("Deprecated in DNN 7.2.2. Use UpdateJournalItem(JournalItem, ModuleInfo). Scheduled removal in v11.0.0.")]
         public void UpdateJournalItem(JournalItem journalItem, int tabId)
         {
             UpdateJournalItem(journalItem, tabId, Null.NullInteger);
