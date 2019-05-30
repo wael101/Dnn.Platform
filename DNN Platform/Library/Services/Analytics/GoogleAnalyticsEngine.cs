@@ -42,13 +42,16 @@ namespace DotNetNuke.Services.Analytics
         public override string RenderScript(string scriptTemplate)
         {
             AnalyticsConfiguration config = GetConfig();
+
             if (config == null)
             {
                 return "";
             }
+
             var trackingId = "";
             var urlParameter = "";
             var trackForAdmin = true;
+
             foreach (AnalyticsSetting setting in config.Settings)
             {
                 switch (setting.SettingName.ToLowerInvariant())
@@ -67,6 +70,7 @@ namespace DotNetNuke.Services.Analytics
                         break;
                 }
             }
+
             if (String.IsNullOrEmpty(trackingId))
             {
                 return "";
@@ -91,8 +95,58 @@ namespace DotNetNuke.Services.Analytics
             {
                 scriptTemplate = scriptTemplate.Replace("[PAGE_URL]", "");
             }
+
             scriptTemplate = scriptTemplate.Replace("[CUSTOM_SCRIPT]", RenderCustomScript(config));
+
             return scriptTemplate;
         }
+
+        public override string RenderCustomScript(AnalyticsConfiguration config)
+        {
+            try
+            {
+                var anonymize = false;
+                var trackingUserId = false;
+
+                foreach (AnalyticsSetting setting in config.Settings)
+                {
+                    switch (setting.SettingName.ToLowerInvariant())
+                    {
+                        case "anonymizeip":
+                        {
+                            bool.TryParse(setting.SettingValue, out anonymize);
+                            break;
+                        }
+                        case "trackinguser":
+                        {
+                            bool.TryParse(setting.SettingValue, out trackingUserId);
+                            break;
+                        }
+                    }
+                }
+
+
+                var customScripts = new System.Text.StringBuilder();
+
+                if (anonymize || PortalSettings.Current.DataConsentActive)
+                {
+                    customScripts.Append("ga('set', 'anonymizeIp', true);");
+                }
+
+                if (trackingUserId)
+                {
+                    customScripts.AppendFormat("ga('set', 'userId', {0});", UserController.Instance.GetCurrentUserInfo().UserID);
+                }
+
+                return customScripts.ToString();
+            }
+            catch (Exception ex)
+            {
+                Exceptions.Exceptions.LogException(ex);
+
+                return string.Empty;
+            }
+        }
+
     }
 }

@@ -12,7 +12,7 @@
     <DefaultHTMLPageLayout>Grid</DefaultHTMLPageLayout>
     <DefaultTargetSchema>IE50</DefaultTargetSchema>
     <OutputType>Library</OutputType>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <RootNamespace>DotNetNuke</RootNamespace>
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
@@ -43,7 +43,7 @@
     <DefineConstants>TRACE;DEBUG</DefineConstants>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <NoWarn>1591, 3001, 3002, 1574, 1573</NoWarn>
-    <LangVersion>6</LangVersion>
+    <LangVersion>7</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\</OutputPath>
@@ -57,7 +57,7 @@
     <Optimize>true</Optimize>
     <DefineConstants>
     </DefineConstants>
-    <LangVersion>6</LangVersion>
+    <LangVersion>7</LangVersion>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>
@@ -120,6 +120,12 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.Extensions.DependencyInjection, Version=2.1.1.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.Extensions.DependencyInjection.2.1.1\lib\net461\Microsoft.Extensions.DependencyInjection.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=2.1.1.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.2.1.1\lib\netstandard2.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+    </Reference>
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="Microsoft.Web.Infrastructure">
       <HintPath>..\..\packages\Microsoft.Web.Infrastructure.1.0.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
@@ -1491,9 +1497,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Services\UserProfile\UserProfilePicHandler.cs" />
+    <Compile Include="Services\UserRequest\IPAddressFamily.cs" />
     <Compile Include="Services\UserRequest\IUserRequestIPAddressController.cs" />
     <Compile Include="Services\UserRequest\UserRequestIPAddressController.cs" />
+    <Compile Include="Services\Users\PurgeDeletedUsers.cs" />
     <Compile Include="Services\Zip\SharpZipLibRedirect.cs" />
+    <Compile Include="Startup.cs" />
     <Compile Include="UI\Containers\ActionBase.cs">
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
@@ -1517,6 +1526,7 @@
     </Compile>
     <Compile Include="UI\ControlUtilities.cs" />
     <Compile Include="UI\FavIcon.cs" />
+    <Compile Include="UI\Modules\BaseModuleControlFactory.cs" />
     <Compile Include="UI\Modules\CachedModuleControl.cs" />
     <Compile Include="UI\Modules\Html5\Html5HostControl.cs">
       <SubType>Code</SubType>
@@ -1531,6 +1541,7 @@
     <Compile Include="UI\Modules\Html5\RequestPropertyAccess.cs" />
     <Compile Include="UI\Modules\IModuleControl.cs" />
     <Compile Include="UI\Modules\IModuleControlFactory.cs" />
+    <Compile Include="UI\Modules\IModuleControlPipeline.cs" />
     <Compile Include="UI\Modules\IModuleInjectionFilter.cs" />
     <Compile Include="UI\Modules\ISettingsControl.cs" />
     <Compile Include="UI\Modules\ModuleCachingType.cs" />
@@ -1825,6 +1836,10 @@
     <ProjectReference Include="..\Controls\CountryListBox\CountryListBox.csproj">
       <Project>{ca056730-5759-41f8-a6c1-420f9c0c63e7}</Project>
       <Name>CountryListBox</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\DotNetNuke.DependencyInjection\DotNetNuke.DependencyInjection.csproj">
+      <Project>{0fca217a-5f9a-4f5b-a31b-86d64ae65198}</Project>
+      <Name>DotNetNuke.DependencyInjection</Name>
     </ProjectReference>
     <ProjectReference Include="..\DotNetNuke.Instrumentation\DotNetNuke.Instrumentation.csproj">
       <Project>{ddf18e36-41a0-4ca7-a098-78ca6e6f41c1}</Project>

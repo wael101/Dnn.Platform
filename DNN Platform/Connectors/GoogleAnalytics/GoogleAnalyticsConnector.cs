@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using DotNetNuke.Entities.Portals;
 using DotNetNuke.Services.Analytics.Config;
 using DotNetNuke.Services.Connections;
 using DotNetNuke.Services.Exceptions;
@@ -85,9 +86,13 @@ namespace DNN.Connectors.GoogleAnalytics
         {
 
             var analyticsConfig = AnalyticsConfiguration.GetConfig("GoogleAnalytics");
+            var portalSettings = new PortalSettings(portalId);
+
             var trackingId = String.Empty;
             var urlParameter = String.Empty;
             var trackForAdmin = false;
+            var anonymizeIp = false;
+            var trackUserId = false;
 
             if (analyticsConfig != null)
             {
@@ -108,8 +113,25 @@ namespace DNN.Connectors.GoogleAnalytics
                                 trackForAdmin = true;
                             }
                             break;
+                        case "anonymizeip":
+                            if (!bool.TryParse(setting.SettingValue, out anonymizeIp))
+                            {
+                                anonymizeIp = false;
+                            }
+                            break;
+                        case "trackuserid":
+                            if (!bool.TryParse(setting.SettingValue, out trackUserId))
+                            {
+                                trackUserId = false;
+                            }
+                            break;
                     }
                 }
+            }
+
+            if (portalSettings.DataConsentActive)
+            {
+                anonymizeIp = true;
             }
 
             var configItems = new Dictionary<string, string>
@@ -117,6 +139,9 @@ namespace DNN.Connectors.GoogleAnalytics
                 { "TrackingID", trackingId },
                 { "UrlParameter", urlParameter},
                 { "TrackAdministrators", trackForAdmin.ToString()},
+                { "AnonymizeIp", anonymizeIp.ToString()},
+                { "TrackUserId", trackUserId.ToString()},
+                { "DataConsent", portalSettings.DataConsentActive.ToString()},
                 { "isDeactivating", false.ToString()}
             };
 
@@ -134,38 +159,39 @@ namespace DNN.Connectors.GoogleAnalytics
             try
             {
 
-                bool isDeactivating = false;
+                var isDeactivating = false;
+
                 bool.TryParse(values["isDeactivating"].ToLowerInvariant(), out isDeactivating);
 
                 string trackingID;
                 string urlParameter;
                 bool trackForAdmin;
+                bool anonymizeIp;
+                bool trackUserId;
 
                 isValid = true;
 
-
                 if (isDeactivating)
                 {
-
                     trackingID = null;
                     urlParameter = null;
                     trackForAdmin = false;
-
-
+                    anonymizeIp = false;
+                    trackUserId = false;
                 }
                 else
                 {
-
                     trackingID = values["TrackingID"] != null ? values["TrackingID"].ToString().Trim() : String.Empty;
                     urlParameter = values["UrlParameter"] != null ? values["UrlParameter"].ToString().Trim() : String.Empty;
-                    trackForAdmin = bool.TryParse(values["TrackAdministrators"].ToLowerInvariant(), out trackForAdmin);
+
+                    bool.TryParse(values["TrackAdministrators"].ToLowerInvariant(), out trackForAdmin);
+                    bool.TryParse(values["AnonymizeIp"].ToLowerInvariant(), out anonymizeIp);
+                    bool.TryParse(values["TrackUserId"].ToLowerInvariant(), out trackUserId);
 
                     if (String.IsNullOrEmpty(trackingID))
                     {
-
                         isValid = false;
                         customErrorMessage = Localization.GetString("TrackingCodeFormat.ErrorMessage", Constants.LocalResourceFile);
-
                     }
 
                 }
@@ -178,30 +204,35 @@ namespace DNN.Connectors.GoogleAnalytics
                         Settings = new AnalyticsSettingCollection()
                     };
 
-
-                    var setting = new AnalyticsSetting
+                    config.Settings.Add(new AnalyticsSetting
                     {
                         SettingName = "TrackingId",
                         SettingValue = trackingID
-                    };
+                    });
 
-                    config.Settings.Add(setting);
-
-                    setting = new AnalyticsSetting
+                    config.Settings.Add(new AnalyticsSetting
                     {
                         SettingName = "UrlParameter",
                         SettingValue = urlParameter
-                    };
+                    });
 
-                    config.Settings.Add(setting);
-
-                    setting = new AnalyticsSetting
+                    config.Settings.Add(new AnalyticsSetting
                     {
                         SettingName = "TrackForAdmin",
                         SettingValue = trackForAdmin.ToString().ToLowerInvariant()
-                    };
+                    });
 
-                    config.Settings.Add(setting);
+                    config.Settings.Add(new AnalyticsSetting
+                    {
+                        SettingName = "AnonymizeIp",
+                        SettingValue = anonymizeIp.ToString().ToLowerInvariant()
+                    });
+
+                    config.Settings.Add(new AnalyticsSetting
+                    {
+                        SettingName = "TrackUserId",
+                        SettingValue = trackUserId.ToString().ToLowerInvariant()
+                    });
 
                     AnalyticsConfiguration.SaveConfig("GoogleAnalytics", config);
                 }

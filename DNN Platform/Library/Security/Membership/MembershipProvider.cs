@@ -75,14 +75,22 @@ namespace DotNetNuke.Security.Membership
         public abstract void GetUserMembership(ref UserInfo user);
         public abstract string ResetPassword(UserInfo user, string passwordAnswer);
         public abstract bool UnLockUser(UserInfo user);
+        public abstract void UserAgreedToTerms(UserInfo user);
+        public abstract void ResetTermsAgreement(int portalId);
+        public abstract void UserRequestsRemoval(UserInfo user, bool remove);
         public abstract void UpdateUser(UserInfo user);
         public abstract UserInfo UserLogin(int portalId, string username, string password, string verificationCode, ref UserLoginStatus loginStatus);
         public abstract UserInfo UserLogin(int portalId, string username, string password, string authType, string verificationCode, ref UserLoginStatus loginStatus);
 
         // Users Online
+
+        [Obsolete("Support for users online was removed in 8.x, other solutions exist outside of the DNN Platform.  Scheduled removal in v11.0.0.")]
         public abstract void DeleteUsersOnline(int TimeWindow);
+        [Obsolete("Support for users online was removed in 8.x, other solutions exist outside of the DNN Platform.  Scheduled removal in v11.0.0.")]
         public abstract ArrayList GetOnlineUsers(int PortalId);
+        [Obsolete("Support for users online was removed in 8.x, other solutions exist outside of the DNN Platform.  Scheduled removal in v11.0.0.")]
         public abstract bool IsUserOnline(UserInfo user);
+        [Obsolete("Support for users online was removed in 8.x, other solutions exist outside of the DNN Platform.  Scheduled removal in v11.0.0.")]
         public abstract void UpdateUsersOnline(Hashtable UserList);
 
         // Legacy

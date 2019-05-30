@@ -255,6 +255,7 @@ namespace DotNetNuke.Entities.Portals
             portalSettings.DefaultAdminSkin = settings.GetValueOrDefault("DefaultAdminSkin", Host.Host.DefaultAdminSkin);
             portalSettings.DefaultIconLocation = settings.GetValueOrDefault("DefaultIconLocation", "icons/sigma");
             portalSettings.DefaultModuleId = settings.GetValueOrDefault("defaultmoduleid", Null.NullInteger);
+            portalSettings.DefaultModuleActionMenu = settings.GetValueOrDefault("DefaultModuleActionMenu", "~/admin/Menus/ModuleActions/ModuleActions.ascx");
             portalSettings.DefaultPortalContainer = settings.GetValueOrDefault("DefaultPortalContainer", Host.Host.DefaultPortalContainer);
             portalSettings.DefaultPortalSkin = settings.GetValueOrDefault("DefaultPortalSkin", Host.Host.DefaultPortalSkin);
             portalSettings.DefaultTabId = settings.GetValueOrDefault("defaulttabid", Null.NullInteger);
@@ -306,6 +307,23 @@ namespace DotNetNuke.Entities.Portals
                 if (timeZone != null)
                     portalSettings.TimeZone = timeZone;
             }
+
+            setting = settings.GetValueOrDefault("DataConsentActive", "False");
+            portalSettings.DataConsentActive = bool.Parse(setting);
+            setting = settings.GetValueOrDefault("DataConsentTermsLastChange", "");
+            if (!string.IsNullOrEmpty(setting))
+            {
+                portalSettings.DataConsentTermsLastChange = DateTime.Parse(setting);
+            }
+            setting = settings.GetValueOrDefault("DataConsentConsentRedirect", "-1");
+            portalSettings.DataConsentConsentRedirect = int.Parse(setting);
+            setting = settings.GetValueOrDefault("DataConsentUserDeleteAction", "0");
+            portalSettings.DataConsentUserDeleteAction = (PortalSettings.UserDeleteAction)int.Parse(setting);
+            setting = settings.GetValueOrDefault("DataConsentDelay", "1");
+            portalSettings.DataConsentDelay = int.Parse(setting);
+            setting = settings.GetValueOrDefault("DataConsentDelayMeasurement", "d");
+            portalSettings.DataConsentDelayMeasurement = setting;
+
         }
 
         protected virtual void UpdateSkinSettings(TabInfo activeTab, PortalSettings portalSettings)

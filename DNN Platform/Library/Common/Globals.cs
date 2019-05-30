@@ -69,7 +69,7 @@ using DotNetNuke.Services.Upgrade;
 using DotNetNuke.Services.Url.FriendlyUrl;
 using DotNetNuke.UI.Skins;
 using DotNetNuke.UI.Utilities;
-
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualBasic.CompilerServices;
 
 using DataCache = DotNetNuke.UI.Utilities.DataCache;
@@ -550,6 +550,14 @@ namespace DotNetNuke.Common
         public static Version DatabaseEngineVersion { get; set; }
 
         /// <summary>
+        /// Gets or sets the Dependency Service.
+        /// </summary>
+        /// <value>
+        /// The Dependency Service.
+        /// </value>
+        internal static IServiceProvider DependencyProvider { get; set; }
+
+        /// <summary>
         /// Redirects the specified URL.
         /// </summary>
         /// <param name="url">The URL.</param>
@@ -811,7 +819,7 @@ namespace DotNetNuke.Common
                 }
                 if (string.IsNullOrEmpty(cultureCode))
                 {
-                    cultureCode = PortalController.Instance.GetCurrentPortalSettings().DefaultLanguage;
+                    cultureCode = !string.IsNullOrEmpty(settings.DefaultLanguage) ? settings.DefaultLanguage : Thread.CurrentThread.CurrentCulture.Name;
                 }
             }
 
@@ -3828,8 +3836,7 @@ namespace DotNetNuke.Common
         }
         
         #region "Obsolete - retained for Binary Compatability"
-
-        // TODO:  These constants are deprecated but cannot be removed until the next batch of breaking change
+        
         // ****************************************************************************************
         // Constants are inlined in code and would require a rebuild of any module or skinobject
         // that may be using these constants.

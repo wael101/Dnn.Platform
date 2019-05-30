@@ -24,7 +24,7 @@ namespace Dnn.AzureConnector.Components
     {
         #region Properties
         private static readonly DataProvider dataProvider = DataProvider.Instance();
-        private const string DefaultDisplayName = "Azure";
+        private const string DefaultDisplayName = "Azure Storage";
 
         public string Name
         {
@@ -213,6 +213,10 @@ namespace Dnn.AzureConnector.Components
                    DisplayName != DefaultDisplayName)
                 {
                     folderMapping.MappingName = DisplayName;
+                }
+                if (!folderMapping.FolderMappingSettings.ContainsKey(Constants.SyncBatchSize))
+                {
+                    folderMapping.FolderMappingSettings[Constants.SyncBatchSize] = Constants.DefaultSyncBatchSize.ToString();
                 }
 
                 FolderMappingController.Instance.UpdateFolderMapping(folderMapping);

@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27703.2035
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.352
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Support Projects", "Support Projects", "{1DFA65CE-5978-49F9-83BA-CFBD0C7A1814}"
 EndProject
@@ -94,6 +94,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Integration", "Integration", "{7E98CA08-903E-45F7-BD83-853763D5E15B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetNuke.Tests.Urls", "DNN Platform\Tests\DotNetNuke.Tests.Urls\DotNetNuke.Tests.Urls.csproj", "{F9CE7C63-C729-4E3A-A266-6B23D75A1247}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3D9C3F5F-1D2D-4D89-995B-438055A5E3A6} = {3D9C3F5F-1D2D-4D89-995B-438055A5E3A6}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetNuke.Tests.AspNetCCP", "DNN Platform\Tests\DotNetNuke.Tests.AspNetCCP\DotNetNuke.Tests.AspNetCCP.csproj", "{64BA74E9-411E-4DC1-91CB-DEF7F22468AD}"
 EndProject
@@ -209,7 +212,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetNuke.Web.Mvc", "DNN Platform\DotNetNuke.Web.Mvc\DotNetNuke.Web.Mvc.csproj", "{64DC5798-9D37-4F8D-97DD-8403E6E70DD3}"
 	ProjectSection(ProjectDependencies) = postProject
 		{9806C125-8CA9-48CC-940A-CCD0442C5993} = {9806C125-8CA9-48CC-940A-CCD0442C5993}
-		{EE1329FE-FD88-4E1A-968C-345E394EF080} = {EE1329FE-FD88-4E1A-968C-345E394EF080}
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetNuke.Tests.Web.Mvc", "DNN Platform\Tests\DotNetNuke.Tests.Web.Mvc\DotNetNuke.Tests.Web.Mvc.csproj", "{AF3A5042-B67B-4F84-9E40-BE06B1105337}"
@@ -303,6 +305,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Cleanup", "Cleanup", "{3ABA
 		DNN Platform\Website\Install\Cleanup\09.01.00.txt = DNN Platform\Website\Install\Cleanup\09.01.00.txt
 		DNN Platform\Website\Install\Cleanup\09.01.01.txt = DNN Platform\Website\Install\Cleanup\09.01.01.txt
 		DNN Platform\Website\Install\Cleanup\09.02.00.txt = DNN Platform\Website\Install\Cleanup\09.02.00.txt
+		DNN Platform\Website\Install\Cleanup\09.04.00.txt = DNN Platform\Website\Install\Cleanup\09.04.00.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{15EE268D-2073-4489-9BB2-26E34D65A8DC}"
@@ -413,7 +416,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BuildScripts", "BuildScript
 		Build\BuildScripts\Package.targets = Build\BuildScripts\Package.targets
 		Build\BuildScripts\Provider.build = Build\BuildScripts\Provider.build
 		Build\BuildScripts\ProviderPackage.targets = Build\BuildScripts\ProviderPackage.targets
-		Build\BuildScripts\SolpartPackage.targets = Build\BuildScripts\SolpartPackage.targets
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Symbols", "Symbols", "{4F538A14-38F5-473F-8386-60D81F3F530A}"
@@ -444,6 +446,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNN.Integration.Test.Framework", "DNN Platform\Tests\DNN.Integration.Test.Framework\DNN.Integration.Test.Framework.csproj", "{8F727796-7C6C-4F42-B385-67B06ECD358E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dnn.GoogleAnalyticsConnector", "DNN Platform\Connectors\GoogleAnalytics\Dnn.GoogleAnalyticsConnector.csproj", "{ADB57FFD-677C-4C30-9723-6EE0A475315B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotNetNuke.ModulePipeline", "DNN Platform\DotNetNuke.ModulePipeline\DotNetNuke.ModulePipeline.csproj", "{C4823821-CFB3-4394-851F-E39D0974EFBD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotNetNuke.DependencyInjection", "DNN Platform\DotNetNuke.DependencyInjection\DotNetNuke.DependencyInjection.csproj", "{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1571,6 +1577,54 @@ Global
 		{ADB57FFD-677C-4C30-9723-6EE0A475315B}.Release-Net45|Any CPU.Build.0 = Release|Any CPU
 		{ADB57FFD-677C-4C30-9723-6EE0A475315B}.Release-Net45|x86.ActiveCfg = Release|Any CPU
 		{ADB57FFD-677C-4C30-9723-6EE0A475315B}.Release-Net45|x86.Build.0 = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Cloud_Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Cloud_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Cloud_Debug|x86.ActiveCfg = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Cloud_Debug|x86.Build.0 = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Cloud_Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Cloud_Release|Any CPU.Build.0 = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Cloud_Release|x86.ActiveCfg = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Cloud_Release|x86.Build.0 = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Debug|x86.Build.0 = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Debug-Net45|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Debug-Net45|Any CPU.Build.0 = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Debug-Net45|x86.ActiveCfg = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Debug-Net45|x86.Build.0 = Debug|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Release|x86.ActiveCfg = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Release|x86.Build.0 = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Release-Net45|Any CPU.ActiveCfg = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Release-Net45|Any CPU.Build.0 = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Release-Net45|x86.ActiveCfg = Release|Any CPU
+		{C4823821-CFB3-4394-851F-E39D0974EFBD}.Release-Net45|x86.Build.0 = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Cloud_Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Cloud_Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Cloud_Debug|x86.ActiveCfg = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Cloud_Debug|x86.Build.0 = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Cloud_Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Cloud_Release|Any CPU.Build.0 = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Cloud_Release|x86.ActiveCfg = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Cloud_Release|x86.Build.0 = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Debug|x86.Build.0 = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Debug-Net45|Any CPU.ActiveCfg = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Debug-Net45|Any CPU.Build.0 = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Debug-Net45|x86.ActiveCfg = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Debug-Net45|x86.Build.0 = Debug|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Release|x86.ActiveCfg = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Release|x86.Build.0 = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Release-Net45|Any CPU.ActiveCfg = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Release-Net45|Any CPU.Build.0 = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Release-Net45|x86.ActiveCfg = Release|Any CPU
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198}.Release-Net45|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1660,6 +1714,8 @@ Global
 		{A3B3F1E8-6C1A-4E35-A5B4-51ECC5A43AF7} = {C3D4B15B-0AAA-494C-AAF5-5CC806B42A34}
 		{8F727796-7C6C-4F42-B385-67B06ECD358E} = {7E98CA08-903E-45F7-BD83-853763D5E15B}
 		{ADB57FFD-677C-4C30-9723-6EE0A475315B} = {9A986091-4238-4804-8C86-6A9A005F72C2}
+		{C4823821-CFB3-4394-851F-E39D0974EFBD} = {29273BE6-1AA8-4970-98A0-41BFFEEDA67B}
+		{0FCA217A-5F9A-4F5B-A31B-86D64AE65198} = {29273BE6-1AA8-4970-98A0-41BFFEEDA67B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {46B6A641-57EB-4B19-B199-23E6FC2AB40B}
